@@ -1,2 +1,3 @@
 - Fri 2 Oct: anyone can open the Showroom Ads landing page at https://chatty-cricket-187.convex.site
 - Fri 2 Oct: visitors can request a sign-in code by email at the live URL (codes reach only the Resend account owner until a domain is verified)
+- Fri 2 Oct: signed-in dealers can upload a car photo with their offer and see it saved under their offers
