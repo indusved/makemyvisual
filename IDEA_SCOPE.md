@@ -491,6 +491,7 @@ M0
 ### live
 
 - Empty landing page at https://chatty-cricket-187.convex.site (checked in browser, Fri 2 Oct)
+- Email-code sign-in (Convex Auth + Resend) deployed. Code send and wrong-code rejection tested locally; full sign-in with a real code not yet verified
 
 ### verified
 
