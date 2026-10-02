@@ -13,8 +13,8 @@
 | Build starts | Fri 2 Oct 2026, 11:00 AM IST |
 | Submission deadline | Sat 17 Oct 2026, 11:00 AM IST (aim for 9:00 AM) |
 | Current milestone | M0 |
-| Live URL | (fill in after first `npm run deploy` — the `.convex.site` address) |
-| Public repo | (fill in after GitHub repo is created) |
+| Live URL | https://chatty-cricket-187.convex.site |
+| Public repo | https://github.com/indusved/showroom-ads |
 | Last updated | Fri 2 Oct 2026 |
 
 ### status language
@@ -478,6 +478,7 @@ M0
 ### implemented
 
 - Convex project scaffolded (from kickoff setup)
+- Empty Vite + React page with Convex static hosting (app-owned root routing, so Convex Auth routes can stay at the root)
 
 ### working locally
 
@@ -485,7 +486,7 @@ M0
 
 ### live
 
--
+- Empty landing page at https://chatty-cricket-187.convex.site (checked in browser, Fri 2 Oct)
 
 ### verified
 

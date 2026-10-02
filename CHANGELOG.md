@@ -1,0 +1,1 @@
+- Fri 2 Oct: anyone can open the Showroom Ads landing page at https://chatty-cricket-187.convex.site
