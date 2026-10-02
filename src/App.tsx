@@ -2,6 +2,7 @@ import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/re
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../convex/_generated/api";
 import SignIn from "./SignIn";
+import NewAd from "./NewAd";
 
 export default function App() {
   return (
@@ -26,8 +27,11 @@ function SignedIn() {
   const { signOut } = useAuthActions();
   return (
     <div>
-      <p>Signed in as <b>{viewer?.email ?? "…"}</b>. Ad maker coming soon.</p>
-      <button onClick={() => void signOut()} style={{ padding: "8px 16px" }}>Sign out</button>
+      <p style={{ color: "#666" }}>
+        Signed in as <b>{viewer?.email ?? "…"}</b>{" "}
+        <button onClick={() => void signOut()} style={{ background: "none", border: "none", textDecoration: "underline", cursor: "pointer", color: "inherit" }}>Sign out</button>
+      </p>
+      <NewAd />
     </div>
   );
 }
