@@ -16,6 +16,8 @@ export const PRESETS = [
   { key: "festive", industry: "automotive", label: "Festive lights", prompt: `A festive evening scene with warm string lights, soft golden bokeh and subtle marigold garlands at the edges, smooth paved floor. ${SHARED}` },
   { key: "studio", industry: "automotive", label: "Clean studio", prompt: `A seamless clean white-to-light-grey photo studio cyclorama with soft even lighting and a gentle floor gradient. ${SHARED}` },
   { key: "mountain-road", industry: "automotive", label: "Mountain road", prompt: `A scenic mountain road viewpoint on a clear day with green slopes and blue sky, clean asphalt pull-out in the foreground. ${SHARED}` },
+  // Made outside OpenAI (Higgsfield Soul Location, 3 Oct) and brought in with importFromUrl.
+  { key: "dealership-floor", industry: "automotive", label: "Dealership floor", source: "import", prompt: `A modern, bright car showroom interior with polished light-grey floor, glass walls and soft overhead lighting. ${SHARED}` },
 ] as const;
 
 export const list = query({
@@ -83,8 +85,28 @@ export const generateAll = internalAction({
   returns: v.null(),
   handler: async (ctx) => {
     for (const preset of PRESETS) {
+      if ("source" in preset && preset.source === "import") continue;
       await ctx.scheduler.runAfter(0, internal.backgrounds.generate, { key: preset.key });
     }
+    return null;
+  },
+});
+
+// Brings in a backdrop made elsewhere (e.g. Higgsfield, Runway) for a preset key.
+// npx convex run backgrounds:importFromUrl '{"key":"...","url":"https://..."}'
+export const importFromUrl = internalAction({
+  args: { key: v.string(), url: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { key, url }) => {
+    const preset = PRESETS.find((p) => p.key === key);
+    if (!preset) throw new Error(`Unknown background preset: ${key}`);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Download failed (${res.status})`);
+    const type = res.headers.get("content-type") ?? "";
+    if (!type.startsWith("image/")) throw new Error(`Not an image: ${type}`);
+    const storageId = await ctx.storage.store(new Blob([await res.arrayBuffer()], { type }));
+    await ctx.runMutation(internal.backgrounds.save, { key: preset.key, industry: preset.industry, label: preset.label, prompt: preset.prompt, storageId });
+    console.log(`Imported background ${key}`);
     return null;
   },
 });
