@@ -2,3 +2,4 @@
 - Fri 2 Oct: visitors can request a sign-in code by email at the live URL (codes reach only the Resend account owner until a domain is verified)
 - Fri 2 Oct: signed-in dealers can upload a car photo with their offer and see it saved under their offers
 - Sat 3 Oct: after saving an offer, dealers get 5 ad sizes (Instagram post, portrait, story, Facebook, Google banner) with their real photo and can download them one by one or as a zip
+- Sat 3 Oct: anyone (not just the builder) can receive a sign-in code, sent from hello@makemyvisual.com

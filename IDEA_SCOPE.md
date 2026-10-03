@@ -154,7 +154,7 @@ Their own car with this week's offer, in the 5 sizes. Not a personal artifact in
 | Background + headline | OpenAI image model (gpt-image-1 or newer) + a text model | OpenAI API, called from a Convex action | Roughly $0.01–0.06 per image at low/medium quality | From search summary of OpenAI pricing page, 2 Oct — **confirm on the pricing page before adding the key** |
 | Image composition (layout, text, sizes) | Browser canvas | in-app | Hindi fonts need a font that supports Devanagari | Unverified — test in M1 |
 | Database, files, auth, hosting | Convex (+ Convex Auth, convex static hosting) | project already scaffolded | Free tier limits to check | Fixed stack |
-| Sign-in email codes | Resend (builder's account), via Convex Auth Email provider | `AUTH_RESEND_KEY`, optional `AUTH_EMAIL_FROM` in Convex env | Free: 3,000/month, 100/day. **`onboarding@resend.dev` only delivers to the account owner until a domain is verified** | Resend pricing page + docs, 2 Oct |
+| Sign-in email codes | Resend (builder's account), via Convex Auth Email provider | `AUTH_RESEND_KEY`, optional `AUTH_EMAIL_FROM` in Convex env | Free: 3,000/month, 100/day. Domain makemyvisual.com verified in Resend (Sat 3 Oct); sender `Showroom Ads <hello@makemyvisual.com>` | Resend pricing page + docs, 2 Oct |
 | Payments | **Decision pending:** Razorpay or Stripe (outside Convex — ask before adding); must accept both INR and USD | payment link | Whether an Indian account can take USD card payments on each — unverified | Not started |
 
 ### unsupported assumptions
@@ -501,7 +501,7 @@ M0
 
 ### current blocker
 
-M1 acceptance needs one person who has never seen the product. Resend domain not verified, so nobody but the builder can receive sign-in codes. Open decisions: payment provider (Razorpay or Stripe) and confirming OpenAI pricing on the official page.
+M1 acceptance needs one person who has never seen the product. Open decisions: payment provider (Razorpay or Stripe) and confirming OpenAI pricing on the official page.
 
 ### next single action
 
@@ -518,4 +518,5 @@ Run the 30-minute riskiest-assumption test: 3 real car photos → cutout → Can
 | Fri 2 Oct | India only in v1 | Festive season timing; rupee pricing | US → waitlist |
 | Fri 2 Oct | Sign-in: email codes via Resend (Convex Auth) | Rubric signups = email + first use; builder chose trusted emails | Domain must be verified in Resend before dealers can receive codes |
 | Fri 2 Oct | Multi-industry provision from day one; automotive only visible in v1 | Builder wants the project to expand (auto dealers, then D2C) | `industry` field + industry config; no D2C screens in the sprint |
+| Sat 3 Oct | Sign-in emails sent from hello@makemyvisual.com | Domain verified in Resend (DKIM, SPF via send/rsend, DMARC p=none added in Hostinger DNS) | Any dealer can now receive sign-in codes |
 | Fri 2 Oct | **Revised:** India + US in v1 | Builder is already in conversation with US dealers; USD payments can reach Revenue L3 | INR + USD payments; US fine-print field; English-only for US |
