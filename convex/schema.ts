@@ -23,5 +23,6 @@ export default defineSchema({
     validity: v.optional(v.string()),
     finePrint: v.optional(v.string()),
     status: v.union(v.literal("submitted"), v.literal("generating"), v.literal("done"), v.literal("failed")),
+    downloads: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 });

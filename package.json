@@ -17,6 +17,7 @@
     "@convex-dev/static-hosting": "^0.2.1",
     "@oslojs/crypto": "^1.0.1",
     "convex": "^1.46.0",
+    "jszip": "^3.10.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "resend": "^6.32.0"

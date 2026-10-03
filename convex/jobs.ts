@@ -74,6 +74,7 @@ export const mine = query({
       headline: v.string(),
       details: v.optional(v.string()),
       validity: v.optional(v.string()),
+      finePrint: v.optional(v.string()),
       status: v.string(),
       photoUrl: v.union(v.string(), v.null()),
     }),
@@ -93,9 +94,41 @@ export const mine = query({
         headline: job.headline,
         details: job.details,
         validity: job.validity,
+        finePrint: job.finePrint,
         status: job.status,
         photoUrl: await ctx.storage.getUrl(job.photoStorageId),
       })),
     );
+  },
+});
+
+async function ownJob(ctx: { db: any }, userId: string, jobId: any) {
+  const job = await ctx.db.get(jobId);
+  if (job === null || job.userId !== userId) throw new ConvexError("Offer not found.");
+  return job;
+}
+
+export const markDone = mutation({
+  args: { jobId: v.id("jobs") },
+  returns: v.null(),
+  handler: async (ctx, { jobId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new ConvexError("Please sign in first.");
+    const job = await ownJob(ctx, userId, jobId);
+    if (job.status !== "done") await ctx.db.patch(jobId, { status: "done" });
+    return null;
+  },
+});
+
+// Counts downloads per offer (one per file or zip) for the submission numbers.
+export const logDownload = mutation({
+  args: { jobId: v.id("jobs") },
+  returns: v.null(),
+  handler: async (ctx, { jobId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new ConvexError("Please sign in first.");
+    const job = await ownJob(ctx, userId, jobId);
+    await ctx.db.patch(jobId, { downloads: (job.downloads ?? 0) + 1 });
+    return null;
   },
 });

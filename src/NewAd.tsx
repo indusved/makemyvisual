@@ -3,6 +3,8 @@ import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "../convex/_generated/api";
 import { INDUSTRIES, DEFAULT_INDUSTRY } from "../convex/industries";
+import type { Id } from "../convex/_generated/dataModel";
+import AdResults from "./AdResults";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/webp";
@@ -21,6 +23,8 @@ export default function NewAd() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [activeJobId, setActiveJobId] = useState<Id<"jobs"> | null>(null);
+  const activeJob = jobs?.find((j) => j._id === activeJobId);
 
   function pickFile(f: File | undefined) {
     setError(null);
@@ -44,7 +48,7 @@ export default function NewAd() {
       const res = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
       if (!res.ok) throw new Error("upload failed");
       const { storageId } = await res.json();
-      await createJob({
+      const jobId = await createJob({
         photoStorageId: storageId,
         headline: String(data.get("headline") ?? ""),
         details: String(data.get("details") ?? ""),
@@ -55,6 +59,7 @@ export default function NewAd() {
       setFile(null);
       setPreview(null);
       setSaved(true);
+      setActiveJobId(jobId);
     } catch (e) {
       setError(e instanceof ConvexError ? String(e.data) : "Something went wrong saving your offer. Please try again.");
     } finally {
@@ -88,8 +93,17 @@ export default function NewAd() {
           {busy ? "Saving…" : "Save offer"}
         </button>
         {error && <p style={{ color: "crimson" }}>{error}</p>}
-        {saved && <p style={{ color: "green" }}>Saved. Ad generation is coming next.</p>}
+        {saved && <p style={{ color: "green" }}>Saved. Your ads are below.</p>}
       </form>
+
+      {activeJob?.photoUrl && (
+        <AdResults
+          jobId={activeJob._id}
+          photoUrl={activeJob.photoUrl}
+          offer={{ headline: activeJob.headline, details: activeJob.details, validity: activeJob.validity, finePrint: activeJob.finePrint }}
+          onClose={() => setActiveJobId(null)}
+        />
+      )}
 
       {jobs && jobs.length > 0 && (
         <section style={{ marginTop: 32 }}>
@@ -97,10 +111,13 @@ export default function NewAd() {
           {jobs.map((job) => (
             <div key={job._id} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
               {job.photoUrl && <img src={job.photoUrl} alt="" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 6 }} />}
-              <div>
+              <div style={{ flex: 1 }}>
                 <b>{job.headline}</b>
                 <div style={{ color: "#666", fontSize: 14 }}>{[job.details, job.validity].filter(Boolean).join(" · ")}</div>
               </div>
+              <button onClick={() => { setActiveJobId(job._id); window.scrollTo({ top: 0, behavior: "smooth" }); }} style={{ padding: "8px 12px", cursor: "pointer" }}>
+                Make ads
+              </button>
             </div>
           ))}
         </section>
