@@ -98,8 +98,8 @@ export default function NewAd() {
 
       {activeJob?.photoUrl && (
         <AdResults
-          jobId={activeJob._id}
-          photoUrl={activeJob.photoUrl}
+          key={activeJob._id}
+          job={{ _id: activeJob._id, photoUrl: activeJob.photoUrl, cutoutUrl: activeJob.cutoutUrl }}
           offer={{ headline: activeJob.headline, details: activeJob.details, validity: activeJob.validity, finePrint: activeJob.finePrint }}
           onClose={() => setActiveJobId(null)}
         />

@@ -77,6 +77,7 @@ export const mine = query({
       finePrint: v.optional(v.string()),
       status: v.string(),
       photoUrl: v.union(v.string(), v.null()),
+      cutoutUrl: v.union(v.string(), v.null()),
     }),
   ),
   handler: async (ctx) => {
@@ -97,6 +98,7 @@ export const mine = query({
         finePrint: job.finePrint,
         status: job.status,
         photoUrl: await ctx.storage.getUrl(job.photoStorageId),
+        cutoutUrl: job.cutoutStorageId ? await ctx.storage.getUrl(job.cutoutStorageId) : null,
       })),
     );
   },
@@ -129,6 +131,25 @@ export const logDownload = mutation({
     if (userId === null) throw new ConvexError("Please sign in first.");
     const job = await ownJob(ctx, userId, jobId);
     await ctx.db.patch(jobId, { downloads: (job.downloads ?? 0) + 1 });
+    return null;
+  },
+});
+
+// Saves the in-browser car cutout (transparent PNG) so it is only computed once per offer.
+export const setCutout = mutation({
+  args: { jobId: v.id("jobs"), cutoutStorageId: v.id("_storage") },
+  returns: v.null(),
+  handler: async (ctx, { jobId, cutoutStorageId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new ConvexError("Please sign in first.");
+    const job = await ownJob(ctx, userId, jobId);
+    const file = await ctx.db.system.get(cutoutStorageId);
+    if (file === null || file.contentType !== "image/png" || file.size > MAX_PHOTO_BYTES * 2) {
+      if (file !== null) await ctx.storage.delete(cutoutStorageId);
+      throw new ConvexError("The cut-out image could not be saved.");
+    }
+    if (job.cutoutStorageId) await ctx.storage.delete(job.cutoutStorageId);
+    await ctx.db.patch(jobId, { cutoutStorageId });
     return null;
   },
 });

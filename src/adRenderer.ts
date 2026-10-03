@@ -1,5 +1,6 @@
-// Draws one offer ad per size on a canvas. The car photo is never altered,
-// only scaled and cropped; all text sits in a separate panel.
+// Draws one offer ad per size on a canvas. The car is never altered or
+// generated: either the original photo (scaled and cropped) or the dealer's
+// own car cut out and placed on a backdrop. All text sits in a separate panel.
 
 export type Offer = {
   headline: string;
@@ -7,6 +8,9 @@ export type Offer = {
   validity?: string;
   finePrint?: string;
 };
+
+// Cut-out car on an AI backdrop. Without a scene, the original photo is used.
+export type Scene = { background: HTMLImageElement; car: HTMLCanvasElement };
 
 export type AdSize = {
   key: string;
@@ -46,6 +50,36 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numb
   const sx = (img.naturalWidth - sw) / 2;
   const sy = (img.naturalHeight - sh) / 2;
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+// Places the cut-out car on the backdrop, sitting on the floor with a soft shadow.
+// The backdrop fills x,y,w,h; the car stays between carTop and the floor line
+// (floorRatio of the height), clear of story UI and the panel fade.
+function drawScene(ctx: CanvasRenderingContext2D, scene: Scene, x: number, y: number, w: number, h: number, carTop = y, floorRatio = 0.9) {
+  drawCover(ctx, scene.background, x, y, w, h);
+  const car = scene.car;
+  const floor = y + h * floorRatio;
+  const room = floor - carTop;
+  const scale = Math.min((w * 0.86) / car.width, (room * 0.8) / car.height);
+  const cw = car.width * scale;
+  const ch = car.height * scale;
+  const cx = x + (w - cw) / 2;
+  const cy = floor - ch;
+
+  ctx.save();
+  const shadow = ctx.createRadialGradient(x + w / 2, floor, 0, x + w / 2, floor, cw * 0.55);
+  shadow.addColorStop(0, "rgba(0,0,0,0.45)");
+  shadow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = shadow;
+  ctx.translate(x + w / 2, floor);
+  ctx.scale(1, 0.12);
+  ctx.translate(-(x + w / 2), -floor);
+  ctx.beginPath();
+  ctx.arc(x + w / 2, floor, cw * 0.55, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.drawImage(car, cx, cy, cw, ch);
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -134,7 +168,7 @@ function drawPanel(ctx: CanvasRenderingContext2D, offer: Offer, x: number, y: nu
   }
 }
 
-export function renderAd(img: HTMLImageElement, offer: Offer, size: AdSize): HTMLCanvasElement {
+export function renderAd(img: HTMLImageElement, offer: Offer, size: AdSize, scene?: Scene): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
   canvas.height = size.height;
@@ -148,7 +182,8 @@ export function renderAd(img: HTMLImageElement, offer: Offer, size: AdSize): HTM
   if (W / H > 1.5) {
     // Wide: photo left, panel right.
     const photoW = Math.round(W * 0.58);
-    drawCover(ctx, img, 0, 0, photoW, H);
+    if (scene) drawScene(ctx, scene, 0, 0, photoW, H);
+    else drawCover(ctx, img, 0, 0, photoW, H);
     const grad = ctx.createLinearGradient(photoW - unit * 1.5, 0, photoW, 0);
     grad.addColorStop(0, "rgba(17,19,23,0)");
     grad.addColorStop(1, COLORS.panel);
@@ -161,7 +196,8 @@ export function renderAd(img: HTMLImageElement, offer: Offer, size: AdSize): HTM
     const usableBottom = H - (size.safeBottom ?? 0);
     const panelH = Math.round((usableBottom - top) * (W === 300 ? 0.5 : 0.42));
     const panelY = usableBottom - panelH;
-    drawCover(ctx, img, 0, 0, W, panelY);
+    if (scene) drawScene(ctx, scene, 0, 0, W, panelY, top, 0.84);
+    else drawCover(ctx, img, 0, 0, W, panelY);
     const fade = unit * 1.2;
     const grad = ctx.createLinearGradient(0, panelY - fade, 0, panelY);
     grad.addColorStop(0, "rgba(17,19,23,0)");

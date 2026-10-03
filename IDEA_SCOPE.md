@@ -471,6 +471,7 @@ Any change to these requires a written scope decision in section 15.
 | Weekly "Monday Offer Pack" subscription | Recurring revenue | Can't prove retention in 2 weeks | Sat 17 Oct |
 | Direct posting to Meta | Saves a step | Integration risk | Sat 17 Oct |
 | Video / reels | Higher engagement | Too heavy for the sprint | Sat 17 Oct |
+| Per-ad custom AI background (dealer types a scene) | More variety | Slow (20–60 s) and paid per ad; presets cover v1 | Sat 17 Oct |
 | D2C brands as a second industry (provision exists: `convex/industries.ts`, `businessProfiles.industry`) | Expansion beyond auto | Splits M1 hours and the first-user story; rubric rewards depth on one user | Sat 17 Oct |
 
 ## 14. current state
@@ -493,7 +494,7 @@ M0
 - Empty landing page at https://chatty-cricket-187.convex.site (checked in browser, Fri 2 Oct)
 - Email-code sign-in (Convex Auth + Resend) deployed. Code send and wrong-code rejection tested locally; full sign-in with a real code verified on the live URL by the builder (Fri 2 Oct)
 - Photo upload + offer screen: save verified on the dev deployment (builder on localhost, Sat 3 Oct, row in dev `jobs`). Same code is live; a save on the live URL not yet seen in prod `jobs`
-- Ad generation, 5 sizes, original-photo + offer panel (no cutout yet), drawn in the browser; zip and single downloads; download count on `jobs.downloads`. Rendering checked locally with a stand-in photo and two offers (Hindi+English, US). Save + 5-size generation verified on the live URL with a real photo (Sat 3 Oct, prod `jobs` row status `done`). Zip download verified on a Pixel 9 Pro (prod `jobs.downloads` = 1). Full golden path verified on the live URL by the builder; M1 acceptance (a stranger, unassisted) still open
+- Ad generation, 5 sizes, original-photo + offer panel (no cutout yet), drawn in the browser; zip and single downloads; download count on `jobs.downloads`. Rendering checked locally with a stand-in photo and two offers (Hindi+English, US). Save + 5-size generation verified on the live URL with a real photo (Sat 3 Oct, prod `jobs` row status `done`). Cutout + background picker deployed; cutout tested locally on a real Chevy Spark photo (18 s incl. model download, clean edges). AI backgrounds not generated yet (OPENAI_API_KEY not set). Zip download verified on a Pixel 9 Pro (prod `jobs.downloads` = 1). Full golden path verified on the live URL by the builder; M1 acceptance (a stranger, unassisted) still open
 
 ### verified
 
@@ -521,4 +522,6 @@ Run the 30-minute riskiest-assumption test: 3 real car photos → cutout → Can
 | Sat 3 Oct | Sign-in emails sent from hello@makemyvisual.com | Domain verified in Resend (DKIM, SPF via send/rsend, DMARC p=none added in Hostinger DNS) | Any dealer can now receive sign-in codes |
 | Sat 3 Oct | Renamed to **MakeMyVisual for Cars** (brand + industry suffix) | Builder's brand; suffix comes from `convex/industries.ts` so D2C becomes "MakeMyVisual for D2C Brands" | Repo renamed to `makemyvisual` (Sat 3 Oct) |
 | Sat 3 Oct | Re-added `resend._domainkey` DKIM in Hostinger | Hostinger email setup (hello@ mailbox) removed it | If Hostinger email settings are changed again, re-check this record |
+| Sat 3 Oct | Car cutout via `@imgly/background-removal` (AGPL-3.0), model files from IMG.LY CDN (staticimgly.com) | Fastest reliable option for the sprint; photos stay on the device; builder approved the CDN download | **Reminder: swap to BiRefNet (MIT) at end of sprint week or before making the code private** — AGPL requires the app's code to stay open-source |
+| Sat 3 Oct | AI backgrounds as a pre-generated library (6 presets via OpenAI gpt-image-1, generated once per deployment) instead of per-ad generation | Instant for dealers, about $0.40 one-time instead of ~$0.05 and 20–60 s per ad (pricing from search summary, to confirm) | Per-ad custom backgrounds → parking lot |
 | Fri 2 Oct | **Revised:** India + US in v1 | Builder is already in conversation with US dealers; USD payments can reach Revenue L3 | INR + USD payments; US fine-print field; English-only for US |

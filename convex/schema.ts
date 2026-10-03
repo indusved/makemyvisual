@@ -24,5 +24,13 @@ export default defineSchema({
     finePrint: v.optional(v.string()),
     status: v.union(v.literal("submitted"), v.literal("generating"), v.literal("done"), v.literal("failed")),
     downloads: v.optional(v.number()),
+    cutoutStorageId: v.optional(v.id("_storage")),
   }).index("by_user", ["userId"]),
+  backgrounds: defineTable({
+    key: v.string(),
+    industry: industryValidator,
+    label: v.string(),
+    prompt: v.string(),
+    storageId: v.id("_storage"),
+  }).index("by_key", ["key"]).index("by_industry", ["industry"]),
 });
