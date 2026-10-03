@@ -493,7 +493,7 @@ M0
 - Empty landing page at https://chatty-cricket-187.convex.site (checked in browser, Fri 2 Oct)
 - Email-code sign-in (Convex Auth + Resend) deployed. Code send and wrong-code rejection tested locally; full sign-in with a real code verified on the live URL by the builder (Fri 2 Oct)
 - Photo upload + offer screen: save verified on the dev deployment (builder on localhost, Sat 3 Oct, row in dev `jobs`). Same code is live; a save on the live URL not yet seen in prod `jobs`
-- Ad generation, 5 sizes, original-photo + offer panel (no cutout yet), drawn in the browser; zip and single downloads; download count on `jobs.downloads`. Rendering checked locally with a stand-in photo and two offers (Hindi+English, US). Save + 5-size generation verified on the live URL with a real photo (Sat 3 Oct, prod `jobs` row status `done`). Download not yet recorded in `jobs.downloads`
+- Ad generation, 5 sizes, original-photo + offer panel (no cutout yet), drawn in the browser; zip and single downloads; download count on `jobs.downloads`. Rendering checked locally with a stand-in photo and two offers (Hindi+English, US). Save + 5-size generation verified on the live URL with a real photo (Sat 3 Oct, prod `jobs` row status `done`). Zip download verified on a Pixel 9 Pro (prod `jobs.downloads` = 1). Full golden path verified on the live URL by the builder; M1 acceptance (a stranger, unassisted) still open
 
 ### verified
 
@@ -501,7 +501,7 @@ M0
 
 ### current blocker
 
-None yet. Open decisions: payment provider (Razorpay or Stripe) and confirming OpenAI pricing on the official page.
+M1 acceptance needs one person who has never seen the product. Resend domain not verified, so nobody but the builder can receive sign-in codes. Open decisions: payment provider (Razorpay or Stripe) and confirming OpenAI pricing on the official page.
 
 ### next single action
 
