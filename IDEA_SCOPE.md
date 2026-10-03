@@ -492,7 +492,7 @@ M0
 
 - Empty landing page at https://chatty-cricket-187.convex.site (checked in browser, Fri 2 Oct)
 - Email-code sign-in (Convex Auth + Resend) deployed. Code send and wrong-code rejection tested locally; full sign-in with a real code verified on the live URL by the builder (Fri 2 Oct)
-- Photo upload + offer screen deployed. Builder reported a save, but prod `jobs` table was empty on check — NOT verified
+- Photo upload + offer screen: save verified on the dev deployment (builder on localhost, Sat 3 Oct, row in dev `jobs`). Same code is live; a save on the live URL not yet seen in prod `jobs`
 
 ### verified
 
