@@ -39,7 +39,7 @@ export default function AdResults({ jobId, photoUrl, offer, onClose }: { jobId: 
     };
   }, [jobId, photoUrl, offer.headline, offer.details, offer.validity, offer.finePrint]);
 
-  const fileName = (ad: Rendered) => `showroom-ads-${ad.key}-${ad.width}x${ad.height}.png`;
+  const fileName = (ad: Rendered) => `makemyvisual-${ad.key}-${ad.width}x${ad.height}.png`;
 
   async function downloadAll() {
     if (!ads) return;
@@ -48,7 +48,7 @@ export default function AdResults({ jobId, photoUrl, offer, onClose }: { jobId: 
     const blob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "showroom-ads.zip";
+    a.download = "makemyvisual-ads.zip";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
     void logDownload({ jobId });

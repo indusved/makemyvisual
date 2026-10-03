@@ -3,11 +3,12 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../convex/_generated/api";
 import SignIn from "./SignIn";
 import NewAd from "./NewAd";
+import Brand from "./Brand";
 
 export default function App() {
   return (
     <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 560, margin: "64px auto", padding: "0 16px" }}>
-      <h1>Showroom Ads</h1>
+      <h1 style={{ margin: "0 0 12px" }}><Brand /></h1>
       <p>Upload your car photo, type your offer, get ads in every social size in 2 minutes.</p>
       <AuthLoading>
         <p>Loading…</p>
