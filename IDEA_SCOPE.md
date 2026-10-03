@@ -14,7 +14,7 @@
 | Submission deadline | Sat 17 Oct 2026, 11:00 AM IST (aim for 9:00 AM) |
 | Current milestone | M1 (M0 riskiest-assumption test still open) |
 | Live URL | https://chatty-cricket-187.convex.site |
-| Public repo | https://github.com/indusved/showroom-ads |
+| Public repo | https://github.com/indusved/makemyvisual |
 | Last updated | Fri 2 Oct 2026 |
 
 ### status language
@@ -519,6 +519,6 @@ Run the 30-minute riskiest-assumption test: 3 real car photos → cutout → Can
 | Fri 2 Oct | Sign-in: email codes via Resend (Convex Auth) | Rubric signups = email + first use; builder chose trusted emails | Domain must be verified in Resend before dealers can receive codes |
 | Fri 2 Oct | Multi-industry provision from day one; automotive only visible in v1 | Builder wants the project to expand (auto dealers, then D2C) | `industry` field + industry config; no D2C screens in the sprint |
 | Sat 3 Oct | Sign-in emails sent from hello@makemyvisual.com | Domain verified in Resend (DKIM, SPF via send/rsend, DMARC p=none added in Hostinger DNS) | Any dealer can now receive sign-in codes |
-| Sat 3 Oct | Renamed to **MakeMyVisual for Cars** (brand + industry suffix) | Builder's brand; suffix comes from `convex/industries.ts` so D2C becomes "MakeMyVisual for D2C Brands" | Repo name still `showroom-ads` |
+| Sat 3 Oct | Renamed to **MakeMyVisual for Cars** (brand + industry suffix) | Builder's brand; suffix comes from `convex/industries.ts` so D2C becomes "MakeMyVisual for D2C Brands" | Repo renamed to `makemyvisual` (Sat 3 Oct) |
 | Sat 3 Oct | Re-added `resend._domainkey` DKIM in Hostinger | Hostinger email setup (hello@ mailbox) removed it | If Hostinger email settings are changed again, re-check this record |
 | Fri 2 Oct | **Revised:** India + US in v1 | Builder is already in conversation with US dealers; USD payments can reach Revenue L3 | INR + USD payments; US fine-print field; English-only for US |
