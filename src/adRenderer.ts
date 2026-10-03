@@ -53,6 +53,26 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: numb
 }
 
 // Places the cut-out car on the backdrop, sitting on the floor with a soft shadow.
+// Flattened, blurred copy of the car's own outline, used as a ground shadow so
+// it lines up with the wheels. squash = shadow height as a share of car height.
+function drawSilhouetteShadow(ctx: CanvasRenderingContext2D, car: HTMLCanvasElement, cx: number, floor: number, cw: number, ch: number, squash: number, blur: number, alpha: number) {
+  const sil = document.createElement("canvas");
+  sil.width = car.width;
+  sil.height = car.height;
+  const s = sil.getContext("2d")!;
+  s.drawImage(car, 0, 0);
+  s.globalCompositeOperation = "source-in";
+  s.fillStyle = "#000";
+  s.fillRect(0, 0, sil.width, sil.height);
+
+  const sh = Math.max(2, ch * squash);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.filter = `blur(${Math.max(1, blur)}px)`;
+  ctx.drawImage(sil, cx - cw * 0.02, floor - sh * 0.75, cw * 1.04, sh);
+  ctx.restore();
+}
+
 // The backdrop fills x,y,w,h; the car stays between carTop and the floor line
 // (floorRatio of the height), clear of story UI and the panel fade.
 function drawScene(ctx: CanvasRenderingContext2D, scene: Scene, x: number, y: number, w: number, h: number, carTop = y, floorRatio = 0.9) {
@@ -60,26 +80,17 @@ function drawScene(ctx: CanvasRenderingContext2D, scene: Scene, x: number, y: nu
   const car = scene.car;
   const floor = y + h * floorRatio;
   const room = floor - carTop;
-  const scale = Math.min((w * 0.86) / car.width, (room * 0.8) / car.height);
+  const scale = Math.min((w * 0.9) / car.width, (room * 0.86) / car.height);
   const cw = car.width * scale;
   const ch = car.height * scale;
   const cx = x + (w - cw) / 2;
-  const cy = floor - ch;
 
-  ctx.save();
-  const shadow = ctx.createRadialGradient(x + w / 2, floor, 0, x + w / 2, floor, cw * 0.55);
-  shadow.addColorStop(0, "rgba(0,0,0,0.45)");
-  shadow.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = shadow;
-  ctx.translate(x + w / 2, floor);
-  ctx.scale(1, 0.12);
-  ctx.translate(-(x + w / 2), -floor);
-  ctx.beginPath();
-  ctx.arc(x + w / 2, floor, cw * 0.55, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  // Wide, soft ambient shadow, then a tight dark contact shadow under the tyres.
+  drawSilhouetteShadow(ctx, car, cx, floor, cw, ch, 0.22, cw * 0.035, 0.45);
+  drawSilhouetteShadow(ctx, car, cx, floor, cw, ch, 0.07, cw * 0.008, 0.8);
 
-  ctx.drawImage(car, cx, cy, cw, ch);
+  // Sink the car slightly into its shadow so the tyres touch the ground.
+  ctx.drawImage(car, cx, floor - ch + ch * 0.012, cw, ch);
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {

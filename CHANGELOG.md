@@ -5,3 +5,4 @@
 - Sat 3 Oct: anyone (not just the builder) can receive a sign-in code, sent from hello@makemyvisual.com
 - Sat 3 Oct: the product is now MakeMyVisual for Cars — new wordmark, tab icon, sign-in emails and download file names
 - Sat 3 Oct: dealers can place their real car, cut out automatically, on a choice of backgrounds (backgrounds appear once generated)
+- Sat 3 Oct: cut-out cars now sit on the ground with a car-shaped contact shadow instead of floating
