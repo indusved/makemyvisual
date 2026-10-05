@@ -12,3 +12,5 @@
 - Mon 5 Oct: a photo guide with do/avoid drawings, take-photo vs gallery buttons, and instant warnings for small, dark or blurry photos
 - Mon 5 Oct: businesses pick one vertical (Cars, Fashion, Gifting, Skincare & beauty) on the home page or first setup screen, and only ever see their own vertical's tips, drawings and backgrounds
 - Mon 5 Oct: fashion clothes on a hanger hang on the wall with a soft shadow instead of standing on the floor
+- Mon 5 Oct: any business can make a branded Diwali greeting (Happy Diwali / शुभ दीपावली …, ready-made thank-you message, optional photo) in WhatsApp, status, Instagram, email and a 4×6 print card for gift boxes, and share it straight to WhatsApp from a phone
+- Mon 5 Oct: the home page leads with Diwali greetings, shows 9 example greetings and ads, and lists Gifting first

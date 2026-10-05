@@ -201,7 +201,7 @@ function Landing({ kind, onKind }: { kind: MakeKind; onKind: (kind: MakeKind) =>
       {showcase && showcase.some((i) => i.url) && (
         <section aria-labelledby="examples-title" style={{ margin: "0 0 28px" }}>
           <h2 id="examples-title" style={sectionTitle}>Examples</h2>
-          <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 12px" }}>Greetings and offer ads, each made from one real photo.</p>
+          <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 12px" }}>Made with sample photos. Yours will use your own photo, or no photo for a greeting.</p>
           <ShowcaseRow items={showcase} label="Example greetings and ads" showIndustry />
         </section>
       )}
