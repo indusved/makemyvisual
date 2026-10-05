@@ -31,7 +31,7 @@
 | Decision | Locked answer |
 |---|---|
 | One-sentence product | **MakeMyVisual for Cars:** upload a real car photo and type your offer, get finished offer ads in every social size in 2 minutes. |
-| The one person | Marketing person at a car dealership in India or the US with no designer free today |
+| The one person | Marketing person at a car dealership **or a D2C brand** (India or US) with no designer free today. D2C added Mon 5 Oct as the faster-to-reach audience |
 | The one moment | A new weekend or festive offer (e.g. "₹50,000 off this Navratri") has to go out today |
 | Current workaround | A designer in Photoshop/Canva for ~3 days per ad, or a self-made post that looks cheap |
 | Core action (user does X → gets Y) | Uploads one car photo + types the offer → gets 3 ad styles × 5 sizes, ready to download |
@@ -472,7 +472,6 @@ Any change to these requires a written scope decision in section 15.
 | Direct posting to Meta | Saves a step | Integration risk | Sat 17 Oct |
 | Video / reels | Higher engagement | Too heavy for the sprint | Sat 17 Oct |
 | Per-ad custom AI background (dealer types a scene) | More variety | Slow (20–60 s) and paid per ad; presets cover v1 | Sat 17 Oct |
-| D2C brands as a second industry (provision exists: `convex/industries.ts`, `businessProfiles.industry`) | Expansion beyond auto | Splits M1 hours and the first-user story; rubric rewards depth on one user | Sat 17 Oct |
 
 ## 14. current state
 
@@ -526,4 +525,6 @@ Run the 30-minute riskiest-assumption test: 3 real car photos → cutout → Can
 | Sat 3 Oct | AI backgrounds as a pre-generated library (6 presets via OpenAI gpt-image-1, generated once per deployment) instead of per-ad generation | Instant for dealers, about $0.40 one-time instead of ~$0.05 and 20–60 s per ad (pricing from search summary, to confirm) | Per-ad custom backgrounds → parking lot |
 | Sat 3 Oct | 7th background "Dealership floor" from Higgsfield Soul Location (0.12 credits), imported via `backgrounds:importFromUrl` | Most realistic dealership look in a side-by-side; Z Image test rejected (put a car in the scene) | Commercial-use rights for Higgsfield Pro output not yet confirmed |
 | Mon 5 Oct | Tested "AI builds the scene around the car, real car pasted back" — Nano Banana (1 Higgsfield credit) and OpenAI masked edit (~$0.07) | Both redrew/moved the car (OpenAI treats the mask as a hint), so the real car can't be laid back cleanly. Raw AI results blend well but the car is no longer the dealer's photo | Not built. Current cutout + shadow stays; strict-inpainting models (e.g. FLUX Fill) would need a new outside service |
+| Mon 5 Oct | **Rescope: D2C brands added alongside car dealers** (links `/cars` and `/d2c`; business profile picks the industry) | Builder expects reaching 3 dealers this week to be hard and can reach D2C brands faster | First three users may now be D2C brands — **gifting packages and fashion** (stated Mon 5 Oct). D2C backgrounds tuned for them (7: Clean studio, Festive glow, Red & gold gifting, Marble, Wooden table, Soft linen, Boutique wall); photo tips to say "hang clothes or use a mannequin, don't lay flat" |
+| Mon 5 Oct | Photo guidance: do/avoid illustrations per industry, take-photo vs gallery buttons, instant photo checks (small, dark, blurry), cut-off warning after cutout | Users don't know how to shoot a usable photo; bad photos are the main cause of bad cutouts | Non-blocking warnings only |
 | Fri 2 Oct | **Revised:** India + US in v1 | Builder is already in conversation with US dealers; USD payments can reach Revenue L3 | INR + USD payments; US fine-print field; English-only for US |

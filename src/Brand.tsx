@@ -14,18 +14,28 @@ function Mark({ size }: { size: number }) {
   );
 }
 
-export default function Brand({ industry = DEFAULT_INDUSTRY, size = 28 }: { industry?: IndustryKey; size?: number }) {
+export default function Brand({
+  industry = DEFAULT_INDUSTRY,
+  size = 28,
+  showSuffix = true,
+}: {
+  industry?: IndustryKey;
+  size?: number;
+  showSuffix?: boolean;
+}) {
   const suffix = INDUSTRIES[industry].brandSuffix;
   const [make, my, visual] = ["Make", "My", BRAND.slice("MakeMy".length)];
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: size * 0.4, flexWrap: "wrap" }} aria-label={`${BRAND} ${suffix}`}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: size * 0.4, flexWrap: "wrap" }} aria-label={showSuffix ? `${BRAND} ${suffix}` : BRAND}>
       <Mark size={size * 1.3} />
       <span style={{ fontSize: size, fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1, color: INK }}>
         {make}
         <span style={{ fontWeight: 500 }}>{my}</span>
         <span style={{ color: INK, background: AMBER, padding: "0 0.12em", marginLeft: "0.04em", borderRadius: 4 }}>{visual}</span>
       </span>
-      <span style={{ fontSize: size * 0.5, fontWeight: 600, color: "#5b6170", letterSpacing: "0.02em", textTransform: "uppercase" }}>{suffix}</span>
+      {showSuffix && (
+        <span style={{ fontSize: size * 0.5, fontWeight: 600, color: "#5b6170", letterSpacing: "0.02em", textTransform: "uppercase" }}>{suffix}</span>
+      )}
     </span>
   );
 }

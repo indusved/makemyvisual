@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { DEFAULT_INDUSTRY } from "./industries";
+import { industryValidator } from "./schema";
 
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -71,6 +72,7 @@ export const mine = query({
     v.object({
       _id: v.id("jobs"),
       _creationTime: v.number(),
+      industry: industryValidator,
       headline: v.string(),
       details: v.optional(v.string()),
       validity: v.optional(v.string()),
@@ -92,6 +94,7 @@ export const mine = query({
       jobs.map(async (job) => ({
         _id: job._id,
         _creationTime: job._creationTime,
+        industry: job.industry,
         headline: job.headline,
         details: job.details,
         validity: job.validity,

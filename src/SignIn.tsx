@@ -23,11 +23,13 @@ export default function SignIn() {
   }
 
   const input = { display: "block", width: "100%", padding: 12, fontSize: 16, margin: "8px 0 12px", boxSizing: "border-box" as const };
-  const button = { padding: "12px 20px", fontSize: 16, cursor: "pointer" };
+  const button = { padding: "12px 20px", fontSize: 16, minHeight: 44, cursor: "pointer" };
 
   return step === "email" ? (
     <form onSubmit={submit}>
-      <label htmlFor="email">Your work email</label>
+      <h2 style={{ fontSize: 18, margin: "0 0 4px" }}>Sign in or create your account</h2>
+      <p style={{ color: "#5b6170", margin: "0 0 16px" }}>We'll email you a 6-digit code. No password needed.</p>
+      <label htmlFor="email">Your email</label>
       <input id="email" name="email" type="email" autoComplete="email" required style={input} />
       <button type="submit" disabled={busy} style={button}>{busy ? "Sending…" : "Send me a code"}</button>
       {error && <p style={{ color: "crimson" }}>{error}</p>}

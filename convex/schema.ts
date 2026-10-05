@@ -3,15 +3,18 @@ import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 export const industryValidator = v.union(v.literal("automotive"), v.literal("d2c"));
+export const marketValidator = v.union(v.literal("IN"), v.literal("US"));
 
 export default defineSchema({
   ...authTables,
   businessProfiles: defineTable({
     userId: v.id("users"),
     industry: industryValidator,
-    market: v.union(v.literal("IN"), v.literal("US")),
+    market: marketValidator,
     businessName: v.string(),
     phone: v.optional(v.string()),
+    // Phone, website or handle shown on the ads.
+    contact: v.optional(v.string()),
     logoStorageId: v.optional(v.id("_storage")),
   }).index("by_user", ["userId"]),
   jobs: defineTable({
