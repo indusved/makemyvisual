@@ -477,35 +477,31 @@ Any change to these requires a written scope decision in section 15.
 
 ### active milestone
 
-M0
+M2 — first users (Mon 5 → Wed 7 Oct), under the **focus reset** (see decision log, Mon 5 Oct): feature freeze until Fri 9 Oct except one ease-of-use pass by end of Tue 6 Oct.
 
-### implemented
+### implemented / live
 
-- Convex project scaffolded (from kickoff setup)
-- Empty Vite + React page with Convex static hosting (app-owned root routing, so Convex Auth routes can stay at the root)
-
-### working locally
-
--
-
-### live
-
-- Empty landing page at https://chatty-cricket-187.convex.site (checked in browser, Fri 2 Oct)
-- Email-code sign-in (Convex Auth + Resend) deployed. Code send and wrong-code rejection tested locally; full sign-in with a real code verified on the live URL by the builder (Fri 2 Oct)
-- Photo upload + offer screen: save verified on the dev deployment (builder on localhost, Sat 3 Oct, row in dev `jobs`). Same code is live; a save on the live URL not yet seen in prod `jobs`
-- Ad generation, 5 sizes, original-photo + offer panel (no cutout yet), drawn in the browser; zip and single downloads; download count on `jobs.downloads`. Rendering checked locally with a stand-in photo and two offers (Hindi+English, US). Save + 5-size generation verified on the live URL with a real photo (Sat 3 Oct, prod `jobs` row status `done`). Cutout + background picker deployed; cutout tested locally on a real Chevy Spark photo (18 s incl. model download, clean edges). 6 AI backgrounds generated with gpt-image-1 on dev and prod (Sat 3 Oct, ~20 s each, checked: no cars/people/text); composite checked locally on the real Chevy photo. Cutout takes ~16 s on a laptop even with the model cached; phone speed not yet measured. Car lighting does not adapt to the backdrop (e.g. daylight car on night scene). Diwali greetings verified locally (Mon 5 Oct): signed-out home hero + showcase + card images (separate-origin tab); greeting form defaults; no-photo Hindi greeting and with-photo (kurta) greeting through the real form, all 5 formats; share falls back to download on desktop (phone share sheet untested). Showcase (9 examples) live on dev and prod; prod greeting backdrops checked. Deployed. Vertical split verified locally (Mon 5 Oct): signed-out home chooser (2×2) and /gifting page via a separate-storage preview; signed-in /fashion → silently /gifting with no banner and only gifting offers; Edit business → Change what you sell → Fashion works; kurta hangs on the Boutique wall in all 5 sizes; skincare and gifting guides show only their own product. Deployed to prod; prod signed-out pages not seen in this browser (signed in). Earlier: D2C flow verified locally at 375px (Mon 5 Oct): onboarding → photo guide → gift-box and kurta photos → 5 ads with business name/contact on Clean studio and Boutique wall; car regression (Chevy offer) still renders car backgrounds; /cars mismatch notice works. Deployed to prod. Signed-out landing on prod not verified (browser was signed in). Hanging garments get a floor shadow and read as standing — possible "hanging item" option. Zip download verified on a Pixel 9 Pro (prod `jobs.downloads` = 1). Full golden path verified on the live URL by the builder; M1 acceptance (a stranger, unassisted) still open
+- Live at https://chatty-cricket-187.convex.site, reached via makemyvisual.com and makemyvisual.com/{gifting, fashion, skincare, cars} (https).
+- Four separate verticals (Cars, Fashion, Gifting, Skincare & beauty), each with its own setup, photo guide, backgrounds and wording.
+- Offer ads (5 sizes) and Diwali greetings (5 formats incl. 4×6 print card), real item cut out and placed, never AI-drawn; Share via phone share sheet.
+- Email-code sign-in from hello@makemyvisual.com; business profile on every ad.
+- Outreach messages for all four groups: Claude Doc "MakeMyVisual outreach messages".
 
 ### verified
 
--
+- See the dated notes earlier in this file; all core flows verified locally and deployed. Not yet verified: Share on a real phone, Hindi on Android/Windows, signed-out live pages in a private window.
+
+### not done (the rows that score)
+
+- Real users: 0. Conversations logged: 0. Riskiest-assumption test: never run. Payment: not built.
 
 ### current blocker
 
-M1 acceptance needs one person who has never seen the product. Open decisions: payment provider (Razorpay or Stripe) and confirming OpenAI pricing on the official page.
+None technical. The gap is users.
 
 ### next single action
 
-Run the 30-minute riskiest-assumption test: 3 real car photos → cutout → Canva offer layout → ask one dealer "would you post this?"
+Finish the ease-of-use pass (by end of Tue 6 Oct), then send the outreach messages and book three 10-minute calls.
 
 ## 15. decision log
 
@@ -525,6 +521,7 @@ Run the 30-minute riskiest-assumption test: 3 real car photos → cutout → Can
 | Sat 3 Oct | AI backgrounds as a pre-generated library (6 presets via OpenAI gpt-image-1, generated once per deployment) instead of per-ad generation | Instant for dealers, about $0.40 one-time instead of ~$0.05 and 20–60 s per ad (pricing from search summary, to confirm) | Per-ad custom backgrounds → parking lot |
 | Sat 3 Oct | 7th background "Dealership floor" from Higgsfield Soul Location (0.12 credits), imported via `backgrounds:importFromUrl` | Most realistic dealership look in a side-by-side; Z Image test rejected (put a car in the scene) | Commercial-use rights for Higgsfield Pro output not yet confirmed |
 | Mon 5 Oct | Tested "AI builds the scene around the car, real car pasted back" — Nano Banana (1 Higgsfield credit) and OpenAI masked edit (~$0.07) | Both redrew/moved the car (OpenAI treats the mask as a hint), so the real car can't be laid back cleanly. Raw AI results blend well but the car is no longer the dealer's photo | Not built. Current cutout + shadow stays; strict-inpainting models (e.g. FLUX Fill) would need a new outside service |
+| Mon 5 Oct | **FOCUS RESET (until Fri 9 Oct)** — feature freeze: no new verticals, backgrounds, design polish, model tests, domain or infra work; new ideas go to the parking lot. Exception: ONE time-boxed ease-of-use pass across the four verticals (builder: "not happy with the UX and ease of use"), done by end of Tue 6 Oct. Then: send outreach (doc ready), watch 3 users on 10-min calls (M2 by Wed 7 Oct), pick the one job with pull (greeting vs offer ad, which vertical), add a payment link for that job only on Thu 8 Oct, fix only what users get stuck on | Since Sat the product grew (4 verticals, greetings, showcase, domain) but zero real users have tried it, the riskiest-assumption test never ran, and nothing earns revenue — the rows that score (signups, revenue, pain) haven't moved | Claude to refuse feature work outside this list until Fri unless the builder explicitly rescopes |
 | Mon 5 Oct | **Slug links with https:** makemyvisual.com attached to an empty site on the builder's existing Hostinger Cloud Startup plan (no extra cost) purely as a redirect doorway — the app stays on Convex. 301 redirects: / → app home; /gifting, /fashion, /skincare → ?make=greeting pages; /cars → offer ads. http and www upgrade to https automatically | Free domain redirect drops paths and redirect-only subdomains can't get SSL; builder approved option (a) | Share makemyvisual.com/gifting etc. Unknown paths show a Hostinger 404; tracking params on slugs are dropped. Email DNS verified intact; sign-in email still sends. Old subdomain redirects still exist (http only) |
 | Mon 5 Oct | makemyvisual.com links via free Hostinger redirects (no Convex Pro): makemyvisual.com and www → app home (302, paths dropped); gifting.makemyvisual.com → /gifting?make=greeting; fashion.makemyvisual.com → /fashion?make=greeting; skincare.makemyvisual.com → /skincare?make=greeting; cars.makemyvisual.com → /cars (offer ads) (302) | Convex custom domains need Pro ($25/dev/month); builder chose the free route | Subdomains work over http; https on subdomains failed at setup (no certificate yet) — recheck. Address bar ends on chatty-cricket-187.convex.site |
 | Mon 5 Oct | **Diwali greetings** as a second thing to make (alongside offer ads), for every vertical: greeting line (incl. Hindi), per-vertical thank-you message, optional photo, business sign-off; 5 formats incl. 4×6 print card for gift boxes; Share via phone share sheet; small "Made with MakeMyVisual" credit (kept — confirmed by builder Mon 5 Oct). Home page leads with a Diwali hero, 9-example showcase (sample photos, labelled), Gifting first | Builder: small businesses will send greetings and goodies to their network in the Diwali season, not only run Meta/Google ads. Diwali 2026 = Sun 8 Nov (most sources) | Greetings need no photo → lower barrier to first use → more signups (Revenue signups row); the credit on forwarded greetings is a free distribution loop |
