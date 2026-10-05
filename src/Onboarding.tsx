@@ -72,29 +72,65 @@ function verticalCard(selected: boolean) {
   };
 }
 
-// One card per vertical, two to a row. Links to the vertical's page, or buttons when onPick is given.
+const badge = {
+  display: "inline-block",
+  fontSize: 12,
+  fontWeight: 700,
+  lineHeight: 1.3,
+  color: "#FFE9B8",
+  background: "#6B1020",
+  borderRadius: 999,
+  padding: "2px 8px",
+  marginTop: 8,
+};
+
+// Example image on a card, or the vertical's icon on a soft panel when it has none yet, so every card lines up.
+function CardMedia({ industry, url, badgeText }: { industry: IndustryKey; url?: string; badgeText?: string }) {
+  return (
+    <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "4 / 3", borderRadius: 8, overflow: "hidden", background: "#f3f1ee" }}>
+      {url ? (
+        <img src={url} alt="" decoding="async" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+          <VerticalIcon industry={industry} />
+        </span>
+      )}
+      {badgeText && <span style={{ ...badge, position: "absolute", top: 8, left: 8, margin: 0 }}>{badgeText}</span>}
+    </span>
+  );
+}
+
+// One card per vertical, two to a row. Links to the vertical's page (plus hrefSearch, e.g. "?make=greeting"), or buttons when onPick is given.
 export function VerticalCards({
   labelledBy,
   onPick,
   selected,
   current,
   disabled,
+  images,
+  badges,
+  hrefSearch = "",
 }: {
   labelledBy: string;
   onPick?: (industry: IndustryKey) => void;
   selected?: IndustryKey;
   current?: IndustryKey;
   disabled?: boolean;
+  images?: Partial<Record<IndustryKey, string>>;
+  badges?: Partial<Record<IndustryKey, string>>;
+  hrefSearch?: string;
 }) {
   const grid = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 };
+  const withMedia = Object.values(images ?? {}).some(Boolean);
   const cards = INDUSTRY_KEYS.filter((k) => INDUSTRIES[k].enabled).map((k) => {
     const body = (
       <>
-        <VerticalIcon industry={k} />
+        {withMedia ? <CardMedia industry={k} url={images?.[k]} badgeText={badges?.[k]} /> : <VerticalIcon industry={k} />}
         <span>
           <span style={{ display: "block", fontSize: 17, fontWeight: 700, lineHeight: 1.25 }}>{INDUSTRIES[k].chooserLabel}</span>
           <span style={{ display: "block", color: MUTED, fontSize: 14, lineHeight: 1.35, marginTop: 4 }}>{INDUSTRIES[k].chooserDetail}</span>
           {current === k && <span style={{ display: "block", fontSize: 13, fontWeight: 600, marginTop: 6 }}>What you sell now</span>}
+          {!withMedia && badges?.[k] && <span style={badge}>{badges[k]}</span>}
         </span>
       </>
     );
@@ -103,7 +139,7 @@ export function VerticalCards({
         {body}
       </button>
     ) : (
-      <a key={k} href={"/" + INDUSTRIES[k].path} style={verticalCard(false)}>
+      <a key={k} href={"/" + INDUSTRIES[k].path + hrefSearch} style={verticalCard(false)}>
         {body}
       </a>
     );
@@ -122,9 +158,12 @@ export default function Onboarding({
   onSaved,
   onCancel,
   onChangeVertical,
+  purpose = "offer",
 }: {
   industry: IndustryKey;
   initial: BusinessDetails;
+  // "greeting" when they came to make a Diwali greeting: the setup copy says it carries their name and contact.
+  purpose?: "greeting" | "offer";
   onSaved?: () => void;
   onCancel?: () => void;
   // Gets what is typed now, so switching vertical from the edit form doesn't drop unsaved edits.
@@ -137,7 +176,9 @@ export default function Onboarding({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const editing = Boolean(onCancel);
+  const greeting = purpose === "greeting" && !editing;
   const config = INDUSTRIES[industry];
+  const shownOn = greeting ? "your greeting and ads" : "your ads";
   const changeVertical = () =>
     onChangeVertical?.({ market, businessName: businessName.trim() ? businessName : initial.businessName, contact: contact.trim() || undefined });
 
@@ -160,7 +201,11 @@ export default function Onboarding({
     <form onSubmit={submit}>
       <h2 id="business-details" tabIndex={-1} style={{ fontSize: 20, margin: "0 0 6px", outline: "none" }}>{editing ? "Edit your business" : `Set up your ${config.businessNoun}`}</h2>
       <p style={{ color: MUTED, margin: "0 0 4px" }}>
-        {editing ? "Changes show on the next ads you make." : "Your name and contact go on every ad. You can change any of this later."}
+        {editing
+          ? "Changes show on the next ads you make."
+          : greeting
+            ? "Your name and contact go on your Diwali greeting, so customers know who it's from. You can change any of this later."
+            : "Your name and contact go on every ad. You can change any of this later."}
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 6, fontSize: 14, color: MUTED, margin: "0 0 14px" }}>
         {editing ? (
@@ -207,10 +252,10 @@ export default function Onboarding({
         placeholder={config.businessNamePlaceholder}
         style={input}
       />
-      <p style={hint}>Shown on your ads.</p>
+      <p style={hint}>Shown on {shownOn}.</p>
 
       <label htmlFor="contact" style={{ fontWeight: 600 }}>
-        Phone, website or Instagram (shown on your ads) <span style={{ color: MUTED, fontWeight: 400 }}>· optional</span>
+        Phone, website or Instagram (shown on {shownOn}) <span style={{ color: MUTED, fontWeight: 400 }}>· optional</span>
       </label>
       <input
         id="contact"
@@ -223,7 +268,7 @@ export default function Onboarding({
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
         <button type="submit" disabled={busy} style={button}>
-          {busy ? "Saving…" : editing ? "Save changes" : "Continue"}
+          {busy ? "Saving…" : editing ? "Save changes" : greeting ? "Continue to your greeting" : "Continue"}
         </button>
         {onCancel && (
           <button type="button" onClick={onCancel} disabled={busy} style={{ ...button, background: "none", border: "none", textDecoration: "underline" }}>
@@ -271,8 +316,8 @@ export function ChangeVertical({
       <h2 id="change-vertical" tabIndex={-1} style={{ fontSize: 20, margin: "0 0 6px", outline: "none" }}>Change what you sell</h2>
       <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 18px" }}>
         New ads will use the new category's backgrounds and photo tips, and will show <b style={{ color: INK }}>{details.businessName}</b>
-        {details.contact && <> and {details.contact}</>}. Offers you saved for {INDUSTRIES[current].chooserLabel} are kept and show again if you
-        switch back.
+        {details.contact && <> and {details.contact}</>}. Greetings and offers you saved for {INDUSTRIES[current].chooserLabel} are kept and show
+        again if you switch back.
       </p>
       <VerticalCards labelledBy="change-vertical" onPick={setNext} selected={next} current={current} disabled={busy} />
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 22 }}>

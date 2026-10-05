@@ -9,6 +9,7 @@ export const industryValidator = v.union(
   v.literal("gifting"),
   v.literal("skincare"),
 );
+export const kindValidator = v.union(v.literal("offer"), v.literal("greeting"));
 export const marketValidator = v.union(v.literal("IN"), v.literal("US"));
 
 export default defineSchema({
@@ -26,8 +27,14 @@ export default defineSchema({
   jobs: defineTable({
     userId: v.id("users"),
     industry: industryValidator,
-    photoStorageId: v.id("_storage"),
+    // "offer" (default when missing) or a seasonal "greeting".
+    kind: v.optional(kindValidator),
+    // Required for offers; optional for greetings.
+    photoStorageId: v.optional(v.id("_storage")),
+    // Offer headline, or the greeting line ("Happy Diwali").
     headline: v.string(),
+    // Greeting message.
+    message: v.optional(v.string()),
     details: v.optional(v.string()),
     validity: v.optional(v.string()),
     finePrint: v.optional(v.string()),
@@ -37,6 +44,15 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_industry", ["userId", "industry"]),
+  // Example outputs shown on the home and vertical pages.
+  showcase: defineTable({
+    key: v.string(),
+    industry: v.optional(industryValidator),
+    kind: kindValidator,
+    caption: v.string(),
+    order: v.number(),
+    storageId: v.id("_storage"),
+  }).index("by_key", ["key"]),
   backgrounds: defineTable({
     key: v.string(),
     // Retired: which vertical uses a backdrop now lives in industries.ts.

@@ -1,11 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { industryValidator } from "./schema";
+import { industryValidator, kindValidator } from "./schema";
+import { SEASON } from "./industries";
 
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-export const LIMITS = { headline: 60, details: 80, validity: 40, finePrint: 200 };
+export const LIMITS = { headline: 60, details: 80, validity: 40, finePrint: 200, message: SEASON.messageMax };
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -28,8 +29,10 @@ export const create = mutation({
   args: {
     // The vertical the form was filled in for; must match the saved profile.
     industry: industryValidator,
-    photoStorageId: v.id("_storage"),
+    kind: v.optional(kindValidator),
+    photoStorageId: v.optional(v.id("_storage")),
     headline: v.string(),
+    message: v.optional(v.string()),
     details: v.optional(v.string()),
     validity: v.optional(v.string()),
     finePrint: v.optional(v.string()),
@@ -39,15 +42,20 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new ConvexError("Please sign in first.");
 
-    const file = await ctx.db.system.get(args.photoStorageId);
-    if (file === null) throw new ConvexError("The photo upload didn't finish. Please try again.");
-    if (!file.contentType || !ALLOWED_TYPES.includes(file.contentType) || file.size > MAX_PHOTO_BYTES) {
-      await ctx.storage.delete(args.photoStorageId);
-      throw new ConvexError("Please upload a JPG, PNG or WebP photo under 10 MB.");
+    const kind = args.kind ?? "offer";
+    if (args.photoStorageId) {
+      const file = await ctx.db.system.get(args.photoStorageId);
+      if (file === null) throw new ConvexError("The photo upload didn't finish. Please try again.");
+      if (!file.contentType || !ALLOWED_TYPES.includes(file.contentType) || file.size > MAX_PHOTO_BYTES) {
+        await ctx.storage.delete(args.photoStorageId);
+        throw new ConvexError("Please upload a JPG, PNG or WebP photo under 10 MB.");
+      }
+    } else if (kind === "offer") {
+      throw new ConvexError("Please add a photo for your offer.");
     }
 
-    const headline = cleanText(args.headline, LIMITS.headline, "Offer headline");
-    if (!headline) throw new ConvexError("Please type your offer headline.");
+    const headline = cleanText(args.headline, LIMITS.headline, kind === "greeting" ? "Greeting" : "Offer headline");
+    if (!headline) throw new ConvexError(kind === "greeting" ? "Please choose a greeting." : "Please type your offer headline.");
 
     const profile = await ctx.db
       .query("businessProfiles")
@@ -55,15 +63,17 @@ export const create = mutation({
       .unique();
     // Never file an offer under another vertical (e.g. category changed mid-upload).
     if (profile && profile.industry !== args.industry) {
-      await ctx.storage.delete(args.photoStorageId);
+      if (args.photoStorageId) await ctx.storage.delete(args.photoStorageId);
       throw new ConvexError("Your business category changed while saving. Please save the offer again.");
     }
 
     return await ctx.db.insert("jobs", {
       userId,
       industry: args.industry,
+      kind,
       photoStorageId: args.photoStorageId,
       headline,
+      message: cleanText(args.message, LIMITS.message, "Message"),
       details: cleanText(args.details, LIMITS.details, "Offer details"),
       validity: cleanText(args.validity, LIMITS.validity, "Valid until"),
       finePrint: cleanText(args.finePrint, LIMITS.finePrint, "Fine print"),
@@ -80,7 +90,9 @@ export const mine = query({
       _id: v.id("jobs"),
       _creationTime: v.number(),
       industry: industryValidator,
+      kind: kindValidator,
       headline: v.string(),
+      message: v.optional(v.string()),
       details: v.optional(v.string()),
       validity: v.optional(v.string()),
       finePrint: v.optional(v.string()),
@@ -102,12 +114,14 @@ export const mine = query({
         _id: job._id,
         _creationTime: job._creationTime,
         industry: job.industry,
+        kind: job.kind ?? "offer",
         headline: job.headline,
+        message: job.message,
         details: job.details,
         validity: job.validity,
         finePrint: job.finePrint,
         status: job.status,
-        photoUrl: await ctx.storage.getUrl(job.photoStorageId),
+        photoUrl: job.photoStorageId ? await ctx.storage.getUrl(job.photoStorageId) : null,
         cutoutUrl: job.cutoutStorageId ? await ctx.storage.getUrl(job.cutoutStorageId) : null,
       })),
     );

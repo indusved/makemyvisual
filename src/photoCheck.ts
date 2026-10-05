@@ -46,7 +46,7 @@ export async function checkPhoto(file: File, productNoun: string): Promise<Photo
       const warnings: PhotoWarning[] = [];
       if (!width || !height) return warnings;
       if (Math.min(width, height) < MIN_SHORT_SIDE) {
-        warnings.push({ id: "small", message: "This photo is small, so ads may look blurry. Use your phone camera, not a screenshot or a forwarded image." });
+        warnings.push({ id: "small", message: "This photo is small, so it may look blurry. Use your phone camera, not a screenshot or a forwarded image." });
       }
 
       const scale = Math.min(1, SAMPLE_MAX / Math.max(width, height));

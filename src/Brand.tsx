@@ -1,8 +1,44 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { BRAND, DEFAULT_INDUSTRY, INDUSTRIES, type IndustryKey } from "../convex/industries";
 
 const INK = "#111317";
 const AMBER = "#F5B700";
+const GOLD = "#E9B44C";
+const MARIGOLD = "#F28C1B";
+const LEAF = "#3F7A3A";
+
+// A clay lamp with its flame, for Diwali touches.
+export function Diya({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block", flexShrink: 0 }}>
+      <path d="M12 2.5c2 2.6 2.9 4.4 2.9 5.9a2.9 2.9 0 0 1-5.8 0c0-1.5.9-3.3 2.9-5.9Z" fill={AMBER} />
+      <path d="M12 6.4c.8 1.1 1.2 1.9 1.2 2.5a1.2 1.2 0 0 1-2.4 0c0-.6.4-1.4 1.2-2.5Z" fill="#FFF3C4" />
+      <path d="M2.5 13.2h19c-.7 4.3-4.7 7-9.5 7s-8.8-2.7-9.5-7Z" fill={MARIGOLD} />
+      <path d="M5.2 15.6h13.6" stroke="#B5530A" strokeWidth="1.1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// A marigold-and-mango-leaf garland (toran) that repeats across the top of a festive panel.
+export function Toran({ height = 34 }: { height?: number }) {
+  const id = "toran" + useId().replace(/[^\w-]/g, "");
+  return (
+    <svg width="100%" height={height} aria-hidden="true" style={{ display: "block" }}>
+      <defs>
+        <pattern id={id} width="36" height={height} patternUnits="userSpaceOnUse">
+          <path d="M0 2.5h36M9 2.5v3M27 2.5v1" stroke={GOLD} strokeWidth="1.4" />
+          <circle cx="9" cy="9" r="3.6" fill={MARIGOLD} />
+          <circle cx="9" cy="16" r="3.4" fill={AMBER} />
+          <circle cx="9" cy="22.6" r="3" fill={MARIGOLD} />
+          <circle cx="9" cy="27.6" r="1.6" fill={GOLD} />
+          <path d="M27 3.5c3.6 4 3.6 10.5 0 15.5-3.6-5-3.6-11.5 0-15.5Z" fill={LEAF} />
+          <path d="M27 6v11" stroke="#6FA35F" strokeWidth="0.8" />
+        </pattern>
+      </defs>
+      <rect width="100%" height={height} fill={`url(#${id})`} />
+    </svg>
+  );
+}
 
 // Viewfinder mark: four frame corners around a focus dot.
 function Mark({ size }: { size: number }) {

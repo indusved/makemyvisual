@@ -1,8 +1,8 @@
 import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { industryValidator } from "./schema";
-import { INDUSTRIES } from "./industries";
+import { industryValidator, kindValidator } from "./schema";
+import { INDUSTRIES, SEASON } from "./industries";
 
 // A small library of AI-made backdrops, generated once and reused by every user.
 // The car or product is never generated: the user's real one is cut out and placed on top.
@@ -20,6 +20,11 @@ const SHARED_GARMENT =
   "Photorealistic, camera at chest height looking straight at the wall, an empty plain wall area in the centre where a garment " +
   "on a hanger will hang, a little floor visible at the bottom. Absolutely no clothes, no hangers, no hooks, no mannequins, " +
   "no clothing rails, no furniture in the centre, no products, no people, no text, no logos.";
+
+const SHARED_GREETING =
+  "Photorealistic festive greeting-card backdrop, camera straight on, warm and elegant, decorations only at the edges, " +
+  "a calm empty area in the upper centre for text and an empty clear surface in the lower centre where a gift or product may be placed. " +
+  "Absolutely no text, no letters, no numbers, no logos, no people, no hands, no gift boxes, no products, no packaging.";
 
 export const PRESETS = [
   // Cars
@@ -41,17 +46,24 @@ export const PRESETS = [
   { key: "d2c-linen", label: "Soft linen", prompt: `A flat surface covered in soft natural beige linen fabric with gentle folds at the far edges, against a warm softly blurred pastel wall, flat and level surface in the centre foreground. ${SHARED_PRODUCT} No podiums, no pedestals, no raised platforms.` },
   { key: "skincare-bathroom", label: "Bathroom shelf", prompt: `A clean bright bathroom vanity counter in pale stone with a softly blurred white-tiled wall and a small leafy plant at the far left edge, spa-like mood. ${SHARED_PRODUCT} No taps, no faucets, no sinks, no vases, no containers.` },
 
+  // Diwali greetings (all verticals; see SEASON in industries.ts).
+  { key: "greet-diyas", label: "Diyas", prompt: `A deep maroon backdrop with softly glowing clay diyas and a few marigold flowers along a dark wooden ledge only at the far left and right, warm golden bokeh above. ${SHARED_GREETING}` },
+  { key: "greet-marigold", label: "Marigold toran", prompt: `A warm cream wall with a marigold and mango-leaf toran garland hanging along the top edge, soft warm daylight, a light wooden table surface across the bottom. ${SHARED_GREETING}` },
+  { key: "greet-maroon-gold", label: "Maroon & gold", prompt: `A rich deep maroon silk drape with a subtle gold paisley pattern and warm golden fairy-light bokeh, a gold-trimmed dark tabletop across the bottom. ${SHARED_GREETING}` },
+  { key: "greet-night-lights", label: "Night lights", prompt: `A Diwali night: warm string lights and glowing paper lanterns softly out of focus in a deep blue night sky, a dark terrace ledge with a few small diyas only at the far edges across the bottom. ${SHARED_GREETING}` },
+
   // Fashion: walls for clothes hanging on a hanger.
   { key: "d2c-boutique", label: "Boutique wall", prompt: "A minimal fashion boutique backdrop: warm beige limewash textured wall with a soft arched niche, light oak floor, soft daylight from the side, camera at chest height looking straight on, empty floor space in the centre foreground where a garment on a stand will be placed. Photorealistic. Absolutely no clothes, no mannequins, no hangers, no clothing rails, no products, no people, no text, no logos." },
   { key: "fashion-concrete", label: "Concrete wall", prompt: `A smooth light-grey polished concrete wall with soft natural daylight falling from the left, minimal modern urban studio, pale concrete floor. ${SHARED_GARMENT}` },
   { key: "fashion-festive", label: "Festive wall", prompt: `A warm festive backdrop: a softly lit terracotta-orange wall with a few marigold garlands hanging only at the far left and right edges and warm golden fairy-light bokeh, Diwali mood. ${SHARED_GARMENT}` },
 ] as const;
 
+// A vertical's offer backdrops, or the season's greeting backdrops (kind "greeting").
 export const list = query({
-  args: { industry: industryValidator },
+  args: { industry: industryValidator, kind: v.optional(kindValidator) },
   returns: v.array(v.object({ key: v.string(), label: v.string(), url: v.union(v.string(), v.null()) })),
-  handler: async (ctx, { industry }) => {
-    const keys: readonly string[] = INDUSTRIES[industry].backgrounds;
+  handler: async (ctx, { industry, kind }) => {
+    const keys: readonly string[] = kind === "greeting" ? SEASON.backgrounds : INDUSTRIES[industry].backgrounds;
     const out: { key: string; label: string; url: string | null }[] = [];
     for (const key of keys) {
       const row = await ctx.db
@@ -115,7 +127,7 @@ export const generateAll = internalAction({
   args: { industry: v.optional(industryValidator), onlyMissing: v.optional(v.boolean()) },
   returns: v.array(v.string()),
   handler: async (ctx, { industry, onlyMissing = true }) => {
-    const wanted = new Set<string>(industry ? INDUSTRIES[industry].backgrounds : PRESETS.map((p) => p.key));
+    const wanted = new Set<string>(industry ? [...INDUSTRIES[industry].backgrounds, ...SEASON.backgrounds] : PRESETS.map((p) => p.key));
     const have = new Set((await ctx.runQuery(internal.backgrounds.existingKeys, {})) as string[]);
     const started: string[] = [];
     for (const preset of PRESETS) {

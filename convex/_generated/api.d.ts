@@ -15,6 +15,7 @@ import type * as http from "../http.js";
 import type * as industries from "../industries.js";
 import type * as jobs from "../jobs.js";
 import type * as profiles from "../profiles.js";
+import type * as showcase from "../showcase.js";
 import type * as users from "../users.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   industries: typeof industries;
   jobs: typeof jobs;
   profiles: typeof profiles;
+  showcase: typeof showcase;
   users: typeof users;
 }>;
 
