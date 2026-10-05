@@ -10,3 +10,5 @@
 - Mon 5 Oct: D2C brands (gift hampers, fashion) can make ads at /d2c with 7 product backgrounds; car dealers keep /cars
 - Mon 5 Oct: first-time users set up their business (industry, India/US, name, phone/website) and it appears on every ad
 - Mon 5 Oct: a photo guide with do/avoid drawings, take-photo vs gallery buttons, and instant warnings for small, dark or blurry photos
+- Mon 5 Oct: businesses pick one vertical (Cars, Fashion, Gifting, Skincare & beauty) on the home page or first setup screen, and only ever see their own vertical's tips, drawings and backgrounds
+- Mon 5 Oct: fashion clothes on a hanger hang on the wall with a soft shadow instead of standing on the floor
