@@ -1,6 +1,6 @@
-// Draws one offer ad per size on a canvas. The car or product is never altered
-// or generated: either the original photo (scaled, cropped or fitted) or the user's
-// own one cut out and placed on a backdrop. All text sits in a separate panel.
+// Draws one offer ad per size on a canvas. The item (car, outfit, gift or product) is
+// never altered or generated: either the original photo (scaled, cropped or fitted) or
+// the user's own one cut out and placed on a backdrop. All text sits in a separate panel.
 import { INDUSTRIES } from "../convex/industries";
 
 export type Offer = {
@@ -12,11 +12,12 @@ export type Offer = {
   contact?: string;
 };
 
-// Cut-out car or product on an AI backdrop. Without a scene, the original photo is used.
+// Cut-out item on an AI backdrop. Without a scene, the original photo is used.
 export type Scene = { background: HTMLImageElement; subject: HTMLCanvasElement };
 
-// Share of the photo area the cut-out may fill.
-export type Placement = { maxWidth: number; maxHeight: number };
+// Share of the photo area the cut-out may fill. "floor": stands on the ground with a
+// contact shadow. "hanging": hangs on the wall (clothes on a hanger) with a soft shadow behind.
+export type Placement = { maxWidth: number; maxHeight: number; mode: "floor" | "hanging" };
 
 export type AdSize = {
   key: string;
@@ -114,6 +115,24 @@ function drawScene(ctx: CanvasRenderingContext2D, scene: Scene, placement: Place
   const subject = scene.subject;
   const floor = y + h * floorRatio;
   const room = floor - subjectTop;
+
+  if (placement.mode === "hanging") {
+    // Hanger hook a tenth of the way down the clear area; the garment's own outline,
+    // blurred and nudged down-right, falls on the wall just behind it.
+    const hook = subjectTop + room * 0.1;
+    const scale = Math.min((w * placement.maxWidth) / subject.width, Math.min(room * placement.maxHeight, floor - hook) / subject.height);
+    const cw = subject.width * scale;
+    const ch = subject.height * scale;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.26)";
+    ctx.shadowBlur = Math.max(2, ch * 0.04);
+    ctx.shadowOffsetX = ch * 0.018;
+    ctx.shadowOffsetY = ch * 0.03;
+    ctx.drawImage(subject, x + (w - cw) / 2, hook, cw, ch);
+    ctx.restore();
+    return;
+  }
+
   const scale = Math.min((w * placement.maxWidth) / subject.width, (room * placement.maxHeight) / subject.height);
   const cw = subject.width * scale;
   const ch = subject.height * scale;

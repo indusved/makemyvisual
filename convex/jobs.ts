@@ -1,7 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { DEFAULT_INDUSTRY } from "./industries";
 import { industryValidator } from "./schema";
 
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -27,6 +26,8 @@ function cleanText(value: string | undefined, max: number, field: string): strin
 
 export const create = mutation({
   args: {
+    // The vertical the form was filled in for; must match the saved profile.
+    industry: industryValidator,
     photoStorageId: v.id("_storage"),
     headline: v.string(),
     details: v.optional(v.string()),
@@ -52,10 +53,15 @@ export const create = mutation({
       .query("businessProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
+    // Never file an offer under another vertical (e.g. category changed mid-upload).
+    if (profile && profile.industry !== args.industry) {
+      await ctx.storage.delete(args.photoStorageId);
+      throw new ConvexError("Your business category changed while saving. Please save the offer again.");
+    }
 
     return await ctx.db.insert("jobs", {
       userId,
-      industry: profile?.industry ?? DEFAULT_INDUSTRY,
+      industry: args.industry,
       photoStorageId: args.photoStorageId,
       headline,
       details: cleanText(args.details, LIMITS.details, "Offer details"),
@@ -66,8 +72,9 @@ export const create = mutation({
   },
 });
 
+// This vertical's 10 newest offers.
 export const mine = query({
-  args: {},
+  args: { industry: industryValidator },
   returns: v.array(
     v.object({
       _id: v.id("jobs"),
@@ -82,12 +89,12 @@ export const mine = query({
       cutoutUrl: v.union(v.string(), v.null()),
     }),
   ),
-  handler: async (ctx) => {
+  handler: async (ctx, { industry }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return [];
     const jobs = await ctx.db
       .query("jobs")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user_industry", (q) => q.eq("userId", userId).eq("industry", industry))
       .order("desc")
       .take(10);
     return await Promise.all(

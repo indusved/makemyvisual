@@ -30,12 +30,21 @@ const FIELDS: { key: FieldKey; maxLength: number; required?: boolean; multiline?
   { key: "finePrint", maxLength: 200, multiline: true },
 ];
 
-export default function NewAd({ industry, profile }: { industry: IndustryKey; profile: { businessName: string; contact?: string } }) {
+export default function NewAd({
+  industry,
+  profile,
+  onBusyChange,
+}: {
+  industry: IndustryKey;
+  profile: { businessName: string; contact?: string };
+  // Told while an offer is saving: the server files it under whatever vertical the profile has then.
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const copy = INDUSTRIES[industry];
   const fields: Record<FieldKey, FieldCopy> = copy.fields;
   const generateUploadUrl = useMutation(api.jobs.generateUploadUrl);
   const createJob = useMutation(api.jobs.create);
-  const jobs = useQuery(api.jobs.mine);
+  const jobs = useQuery(api.jobs.mine, { industry });
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -52,6 +61,10 @@ export default function NewAd({ industry, profile }: { industry: IndustryKey; pr
   const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  useEffect(() => {
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
 
   function pickFile(f: File | undefined) {
     setPhotoError(null);
@@ -88,6 +101,7 @@ export default function NewAd({ industry, profile }: { industry: IndustryKey; pr
       if (!res.ok) throw new Error("upload failed");
       const { storageId } = await res.json();
       const jobId = await createJob({
+        industry,
         photoStorageId: storageId,
         headline: String(data.get("headline") ?? ""),
         details: String(data.get("details") ?? ""),
@@ -115,7 +129,7 @@ export default function NewAd({ industry, profile }: { industry: IndustryKey; pr
 
         <div role="group" aria-labelledby="photo-label" style={{ position: "relative" }}>
           <p id="photo-label" style={{ margin: 0 }}>Photo of your {copy.productNoun}</p>
-          <PhotoGuide industry={industry} defaultOpen={jobs !== undefined && !jobs.some((job) => job.industry === industry)} />
+          <PhotoGuide industry={industry} defaultOpen={jobs !== undefined && jobs.length === 0} />
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
             <button type="button" onClick={() => cameraRef.current?.click()} style={{ ...pickButton, background: INK, color: "#fff" }}>

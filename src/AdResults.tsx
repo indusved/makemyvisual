@@ -12,6 +12,9 @@ type Job = { _id: Id<"jobs">; photoUrl: string; cutoutUrl: string | null };
 
 const ORIGINAL = "original";
 
+// "Red & gold gifting" → "red-and-gold-gifting", for file names.
+const slug = (text: string) => text.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
 const note: CSSProperties = { background: "#FFF6D6", border: "1px solid #F5B700", borderRadius: 8, padding: "10px 12px", color: "#4a3700", fontSize: 14, lineHeight: 1.45, margin: "12px 0" };
 const linkButton: CSSProperties = { background: "none", border: "none", padding: "0 4px", minHeight: 44, cursor: "pointer", fontSize: 14, textDecoration: "underline", color: "inherit" };
 
@@ -50,10 +53,10 @@ export default function AdResults({ job, offer, industry, onClose }: { job: Job;
     };
     cutoutRef.current ??= (async () => {
       // Loaded on demand: the cut-out library is large.
-      const { cutOutCar, trimCutout } = await import("./cutout");
+      const { cutOut, trimCutout } = await import("./cutout");
       if (job.cutoutUrl) return trimCutout(await loadImage(job.cutoutUrl));
       say(`Cutting out your ${noun}… the first time on a device can take up to a minute.`);
-      const blob = await cutOutCar(job.photoUrl, (f) => say(`Getting the cut-out tool ready… ${Math.round(f * 100)}%`));
+      const blob = await cutOut(job.photoUrl, (f) => say(`Getting the cut-out tool ready… ${Math.round(f * 100)}%`));
       say(`Placing your ${noun}…`);
       // Save it so this offer never needs cutting out again.
       void (async () => {
@@ -132,9 +135,10 @@ export default function AdResults({ job, offer, industry, onClose }: { job: Job;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [look, industry, job._id, job.photoUrl, offer.headline, offer.details, offer.validity, offer.finePrint, offer.businessName, offer.contact]);
 
-  // D2C background keys already start with "d2c-"; don't repeat it in the file name.
-  const lookName = look?.replace(`${config.path}-`, "") ?? "";
-  const fileName = (ad: Rendered) => `makemyvisual-${config.path}-${lookName}-${ad.key}-${ad.width}x${ad.height}.png`;
+  const looks = [{ key: ORIGINAL, label: "My photo", url: job.photoUrl }, ...backdrops];
+  // Named after the background people picked ("festive-glow", "my-photo"), not its internal key.
+  const lookSlug = slug(looks.find((l) => l.key === look)?.label ?? "") || "ad";
+  const fileName = (ad: Rendered) => `makemyvisual-${config.path}-${lookSlug}-${ad.key}-${ad.width}x${ad.height}.png`;
 
   async function downloadAll() {
     if (!ads) return;
@@ -148,8 +152,6 @@ export default function AdResults({ job, offer, industry, onClose }: { job: Job;
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
     void logDownload({ jobId: job._id });
   }
-
-  const looks = [{ key: ORIGINAL, label: "My photo", url: job.photoUrl }, ...backdrops];
 
   return (
     <section style={{ marginTop: 24, padding: 16, border: "1px solid #ddd", borderRadius: 12 }}>
@@ -178,18 +180,21 @@ export default function AdResults({ job, offer, industry, onClose }: { job: Job;
         })}
       </div>
 
-      {cutoutFailed && (
-        <p role="status" style={note}>
-          We couldn't cleanly cut out the {noun} from this photo, so your ads use the original photo. A photo with the whole {noun} in view and a plain background works best.
-        </p>
-      )}
-      {cutOffEdge && !cutoutFailed && (
-        <p role="status" style={note}>
-          Part of your {noun} looks cut off in the photo. For the best ads, retake it with the whole {noun} in frame.
-        </p>
-      )}
-      {status && <p aria-live="polite">{status}</p>}
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {/* Always mounted, so screen readers read out text as it appears. */}
+      <div role="status">
+        {cutoutFailed && (
+          <p style={note}>
+            We couldn't cleanly cut out the {noun} from this photo, so your ads use the original photo. A photo with the whole {noun} in view and a plain background works best.
+          </p>
+        )}
+        {cutOffEdge && !cutoutFailed && (
+          <p style={note}>
+            Part of your {noun} looks cut off in the photo. For the best ads, retake it with the whole {noun} in frame.
+          </p>
+        )}
+        {status && <p>{status}</p>}
+      </div>
+      {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
       {ads && (
         <>
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", margin: "12px 0" }}>

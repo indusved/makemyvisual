@@ -1,24 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
-import { Authenticated, Unauthenticated, AuthLoading, useMutation, useQuery } from "convex/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { ConvexError } from "convex/values";
 import { api } from "../convex/_generated/api";
-import {
-  BRAND,
-  DEFAULT_INDUSTRY,
-  INDUSTRIES,
-  INDUSTRY_KEYS,
-  industryFromPath,
-  productName,
-  type IndustryKey,
-} from "../convex/industries";
+import { BRAND, INDUSTRIES, industryFromPath, productName, type IndustryKey } from "../convex/industries";
 import SignIn from "./SignIn";
 import NewAd from "./NewAd";
 import Brand from "./Brand";
-import Onboarding from "./Onboarding";
+import Onboarding, { ChangeVertical, VerticalCards, type BusinessDetails } from "./Onboarding";
 
 const INK = "#111317";
-const AMBER = "#F5B700";
 const MUTED = "#5b6170";
 
 const heading = { margin: "0 0 12px" };
@@ -33,26 +23,27 @@ const linkButton = {
   cursor: "pointer",
 };
 
-// "Car dealership" → "car dealership", but "D2C brand" stays as is.
-function inSentence(label: string) {
-  return /^[A-Z][a-z]/.test(label) ? label[0].toLowerCase() + label.slice(1) : label;
-}
-
 export default function App() {
   const [urlIndustry, setUrlIndustry] = useState(() => industryFromPath(window.location.pathname));
-  const [arrivedAt] = useState(urlIndustry);
 
   useEffect(() => {
     document.title = urlIndustry ? productName(urlIndustry) : BRAND;
   }, [urlIndustry]);
 
-  const syncUrl = useCallback((industry: IndustryKey) => {
-    if (industryFromPath(window.location.pathname) !== industry) {
+  // Keeps the address bar on "/" + the vertical's path (or "/" when none), without a reload.
+  const goTo = useCallback((industry: IndustryKey | null) => {
+    const path = industry ? "/" + INDUSTRIES[industry].path : "/";
+    if (window.location.pathname !== path) {
       const { search, hash } = window.location;
-      history.replaceState(null, "", "/" + INDUSTRIES[industry].path + search + hash);
+      history.replaceState(null, "", path + search + hash);
     }
     setUrlIndustry(industry);
   }, []);
+
+  // Retired or unknown paths show the home page, so tidy them to "/".
+  useEffect(() => {
+    if (industryFromPath(window.location.pathname) === null) goTo(null);
+  }, [goTo]);
 
   return (
     <main style={{ fontFamily: "system-ui, sans-serif", color: INK, maxWidth: 560, margin: "40px auto 64px", padding: "0 16px" }}>
@@ -62,7 +53,7 @@ export default function App() {
       </AuthLoading>
       <Unauthenticated>{urlIndustry ? <SignedOut industry={urlIndustry} /> : <Landing />}</Unauthenticated>
       <Authenticated>
-        <SignedIn arrivedAt={arrivedAt} onIndustry={syncUrl} />
+        <SignedIn urlIndustry={urlIndustry} goTo={goTo} />
       </Authenticated>
     </main>
   );
@@ -73,41 +64,9 @@ function Landing() {
     <>
       <h1 style={{ margin: "0 0 20px" }}><Brand showSuffix={false} size={32} /></h1>
       <p style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.3, margin: "0 0 8px" }}>Ad-ready visuals from one photo, in every social size.</p>
-      <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 28px" }}>
-        Your real photo goes on every ad, never an AI-made copy. Pick what you sell to start.
-      </p>
-      <nav aria-label="Choose your business" style={{ display: "grid", gap: 12 }}>
-        {INDUSTRY_KEYS.filter((k) => INDUSTRIES[k].enabled).map((k) => (
-          <a
-            key={k}
-            href={"/" + INDUSTRIES[k].path}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              minHeight: 84,
-              padding: "16px 18px",
-              boxSizing: "border-box",
-              border: "1px solid #ccc",
-              borderRadius: 12,
-              background: "#fff",
-              color: INK,
-              textDecoration: "none",
-            }}
-          >
-            <span style={{ flex: 1 }}>
-              <span style={{ display: "block", fontSize: 20, fontWeight: 700 }}>{INDUSTRIES[k].chooserLabel}</span>
-              <span style={{ display: "block", color: MUTED, fontSize: 15, marginTop: 4 }}>{INDUSTRIES[k].chooserDetail}</span>
-            </span>
-            <span
-              aria-hidden="true"
-              style={{ display: "grid", placeItems: "center", width: 40, height: 40, flexShrink: 0, borderRadius: 999, background: INK, color: AMBER, fontSize: 20, fontWeight: 700 }}
-            >
-              →
-            </span>
-          </a>
-        ))}
-      </nav>
+      <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 28px" }}>Your real photo goes on every ad, never an AI-made copy.</p>
+      <h2 id="home-vertical" style={{ fontSize: 18, margin: "0 0 12px" }}>What do you sell?</h2>
+      <VerticalCards labelledBy="home-vertical" />
     </>
   );
 }
@@ -127,21 +86,32 @@ function SignedOut({ industry }: { industry: IndustryKey }) {
   );
 }
 
-function SignedIn({ arrivedAt, onIndustry }: { arrivedAt: IndustryKey | null; onIndustry: (industry: IndustryKey) => void }) {
+function SignedIn({ urlIndustry, goTo }: { urlIndustry: IndustryKey | null; goTo: (industry: IndustryKey | null) => void }) {
   const viewer = useQuery(api.users.viewer);
   const profile = useQuery(api.profiles.mine);
-  const saveProfile = useMutation(api.profiles.save);
   const { signOut } = useAuthActions();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<IndustryKey | null>(null);
-  const [mismatch, setMismatch] = useState(arrivedAt);
-  const [switching, setSwitching] = useState(false);
-  const [switchError, setSwitchError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"ads" | "edit" | "change">("ads");
+  // What the edit form holds when "Change what you sell" is tapped, saved along with the new vertical.
+  const [draft, setDraft] = useState<BusinessDetails | null>(null);
+  // While an offer is saving, a vertical switch could file it under the new vertical, so editing waits.
+  const [savingOffer, setSavingOffer] = useState(false);
+  const editRef = useRef<HTMLButtonElement>(null);
 
+  // The button just pressed disappears on every screen change, so move focus to the new screen
+  // (or back to "Edit business"), letting keyboard and screen-reader users carry on from there.
+  const shownMode = useRef(mode);
+  useEffect(() => {
+    if (shownMode.current === mode) return;
+    shownMode.current = mode;
+    const target = mode === "ads" ? editRef.current : document.getElementById(mode === "edit" ? "business-details" : "change-vertical");
+    target?.focus();
+  }, [mode]);
+
+  // A saved business always wins over whatever vertical the address names.
   const savedIndustry = profile?.industry;
   useEffect(() => {
-    if (savedIndustry) onIndustry(savedIndustry);
-  }, [savedIndustry, onIndustry]);
+    if (savedIndustry) goTo(savedIndustry);
+  }, [savedIndustry, goTo]);
 
   const accountLine = (business?: { name: string; onEdit?: () => void }) => (
     <div style={{ color: MUTED, fontSize: 14, display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 6, margin: "0 0 20px" }}>
@@ -157,7 +127,9 @@ function SignedIn({ arrivedAt, onIndustry }: { arrivedAt: IndustryKey | null; on
       {business?.onEdit && (
         <>
           <span aria-hidden="true">·</span>
-          <button onClick={business.onEdit} style={linkButton}>Edit business</button>
+          <button ref={editRef} onClick={business.onEdit} disabled={savingOffer} style={{ ...linkButton, cursor: savingOffer ? "default" : "pointer" }}>
+            Edit business
+          </button>
         </>
       )}
       <span aria-hidden="true">·</span>
@@ -168,83 +140,69 @@ function SignedIn({ arrivedAt, onIndustry }: { arrivedAt: IndustryKey | null; on
   if (profile === undefined) {
     return (
       <>
-        <h1 style={heading}><Brand industry={arrivedAt ?? undefined} showSuffix={arrivedAt !== null} /></h1>
+        <h1 style={heading}><Brand industry={urlIndustry ?? undefined} showSuffix={urlIndustry !== null} /></h1>
         <p>Loading…</p>
       </>
     );
   }
 
   if (profile === null) {
-    const start = arrivedAt ?? DEFAULT_INDUSTRY;
+    if (!urlIndustry) {
+      return (
+        <>
+          <h1 style={heading}><Brand showSuffix={false} /></h1>
+          {accountLine()}
+          <h2 id="setup-vertical" style={{ fontSize: 20, margin: "0 0 6px" }}>What do you sell?</h2>
+          <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 18px" }}>
+            Pick one. Your backgrounds, photo tips and ad wording will be made for it. You can change it later.
+          </p>
+          <VerticalCards labelledBy="setup-vertical" onPick={goTo} />
+        </>
+      );
+    }
     return (
       <>
-        <h1 style={heading}><Brand industry={draft ?? start} /></h1>
+        <h1 style={heading}><Brand industry={urlIndustry} /></h1>
         {accountLine()}
-        <Onboarding
-          initial={{ industry: start, market: "IN", businessName: "" }}
-          onIndustryChange={setDraft}
-          onSaved={() => {
-            setDraft(null);
-            setMismatch(null);
-          }}
-        />
+        <Onboarding industry={urlIndustry} initial={{ market: "IN", businessName: "" }} onChangeVertical={() => goTo(null)} />
       </>
     );
   }
 
   const { industry, market, businessName, contact } = profile;
 
-  async function switchTo(next: IndustryKey) {
-    setSwitching(true);
-    setSwitchError(null);
-    try {
-      await saveProfile({ industry: next, market, businessName, contact });
-      setMismatch(null);
-    } catch (e) {
-      setSwitchError(e instanceof ConvexError ? String(e.data) : "Couldn't switch. Please try again.");
-    } finally {
-      setSwitching(false);
-    }
-  }
-
-  function closeEditor() {
-    setEditing(false);
-    setDraft(null);
-  }
-
   return (
     <>
-      <h1 style={heading}><Brand industry={editing && draft ? draft : industry} /></h1>
-      {!editing && <p style={{ lineHeight: 1.45, margin: "0 0 12px" }}>{INDUSTRIES[industry].tagline}</p>}
-      {accountLine({ name: businessName, onEdit: editing ? undefined : () => setEditing(true) })}
+      <h1 style={heading}>{mode === "change" ? <Brand showSuffix={false} /> : <Brand industry={industry} />}</h1>
+      {mode === "ads" && <p style={{ lineHeight: 1.45, margin: "0 0 12px" }}>{INDUSTRIES[industry].tagline}</p>}
+      {accountLine({ name: businessName, onEdit: mode === "ads" ? () => setMode("edit") : undefined })}
 
-      {mismatch && mismatch !== industry && !editing && (
-        <div
-          role="status"
-          style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 12px", padding: "10px 14px", margin: "0 0 24px", border: `1px solid ${AMBER}`, background: "#FFF8E1", borderRadius: 8 }}
-        >
-          <span style={{ flex: "1 1 180px" }}>You're set up as a {inSentence(INDUSTRIES[industry].label)}.</span>
-          <button onClick={() => void switchTo(mismatch)} disabled={switching} style={{ padding: "10px 14px", fontSize: 15, minHeight: 44, cursor: "pointer" }}>
-            {switching ? "Switching…" : `Switch to ${inSentence(INDUSTRIES[mismatch].label)}`}
-          </button>
-          <button onClick={() => setMismatch(null)} style={{ ...linkButton, fontSize: 14, color: MUTED }}>Keep as is</button>
-          {switchError && <p style={{ color: "crimson", flexBasis: "100%", margin: "4px 0 0" }}>{switchError}</p>}
+      {/* Kept mounted (hidden) while choosing a vertical, so Cancel brings back any unsaved edits. */}
+      {mode !== "ads" && (
+        <div style={{ display: mode === "edit" ? undefined : "none" }}>
+          <Onboarding
+            industry={industry}
+            initial={{ market, businessName, contact }}
+            onCancel={() => setMode("ads")}
+            onSaved={() => setMode("ads")}
+            onChangeVertical={(typed) => {
+              setDraft(typed);
+              setMode("change");
+            }}
+          />
         </div>
       )}
-
-      {editing && (
-        <Onboarding
-          initial={{ industry, market, businessName, contact }}
-          onIndustryChange={setDraft}
-          onCancel={closeEditor}
-          onSaved={() => {
-            closeEditor();
-            setMismatch(null);
-          }}
+      {mode === "change" && (
+        <ChangeVertical
+          current={industry}
+          details={draft ?? { market, businessName, contact }}
+          onCancel={() => setMode("edit")}
+          onDone={() => setMode("ads")}
         />
       )}
-      <div style={{ display: editing ? "none" : undefined }}>
-        <NewAd industry={industry} profile={{ businessName, contact }} />
+      {/* Keyed by vertical so an unfinished ad never carries over into another vertical. */}
+      <div style={{ display: mode === "ads" ? undefined : "none" }}>
+        <NewAd key={industry} industry={industry} profile={{ businessName, contact }} onBusyChange={setSavingOffer} />
       </div>
     </>
   );

@@ -32,7 +32,7 @@ export default function SignIn() {
       <label htmlFor="email">Your email</label>
       <input id="email" name="email" type="email" autoComplete="email" required style={input} />
       <button type="submit" disabled={busy} style={button}>{busy ? "Sending…" : "Send me a code"}</button>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
     </form>
   ) : (
     <form onSubmit={submit}>
@@ -42,7 +42,7 @@ export default function SignIn() {
       <input name="email" type="hidden" value={step.email} />
       <button type="submit" disabled={busy} style={button}>{busy ? "Checking…" : "Sign in"}</button>{" "}
       <button type="button" onClick={() => setStep("email")} style={{ ...button, background: "none", border: "none" }}>Use a different email</button>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
     </form>
   );
 }

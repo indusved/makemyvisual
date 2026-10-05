@@ -1,9 +1,10 @@
-// In-browser car cutout. The photo never leaves the device; only the model
-// files are downloaded (once) from IMG.LY's CDN. AGPL-3.0: see IDEA_SCOPE.md
-// decision log — swap to BiRefNet (MIT) before making the code private.
+// In-browser cut-out of the car, outfit, gift or product. The photo never leaves
+// the device; only the model files are downloaded (once) from IMG.LY's CDN.
+// AGPL-3.0: see IDEA_SCOPE.md decision log — swap to BiRefNet (MIT) before making
+// the code private.
 import { removeBackground } from "@imgly/background-removal";
 
-export async function cutOutCar(photoUrl: string, onProgress?: (fraction: number) => void): Promise<Blob> {
+export async function cutOut(photoUrl: string, onProgress?: (fraction: number) => void): Promise<Blob> {
   return await removeBackground(photoUrl, {
     output: { format: "image/png" },
     progress: (key, current, total) => {
@@ -17,7 +18,7 @@ export type Trimmed = { canvas: HTMLCanvasElement; touchesEdge: boolean };
 // Crops the cutout to its visible pixels and rejects results that are
 // clearly wrong (almost nothing kept, or almost everything kept).
 // touchesEdge: solid pixels run along a border of the photo, which usually
-// means part of the car or product was outside the frame when it was taken.
+// means part of the item was outside the frame when it was taken.
 export function trimCutout(img: HTMLImageElement): Trimmed | null {
   const w = img.naturalWidth;
   const h = img.naturalHeight;

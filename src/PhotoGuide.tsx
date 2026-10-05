@@ -9,12 +9,17 @@ const PAPER = "#f4f5f7";
 const NIGHT = "#1d2025";
 const RED = "#d93025";
 const GREEN = "#1e8e3e";
+// Darker green for small text, so it stays readable (about 6:1 on white).
+const GREEN_TEXT = "#137333";
 
-type Tone = "ink" | "muted" | "dim";
+// "shade" draws a shape as a flat silhouette, for the hard shadow a flash throws behind it.
+type Tone = "ink" | "muted" | "dim" | "shade";
+const SHADE = "#121418";
 const TONES: Record<Tone, { line: string; soft: string; fill: string; glass: string; lamp: string; shadow: string }> = {
   ink: { line: INK, soft: GREY, fill: "#fff", glass: "#e6e9ee", lamp: AMBER, shadow: "#e2e5ea" },
   muted: { line: "#b4b8c0", soft: "#c9ccd2", fill: "#fbfbfc", glass: "#f0f1f4", lamp: "#e3e5e9", shadow: "transparent" },
   dim: { line: "#4d525c", soft: "#3b3f47", fill: "#262a30", glass: "#2e3238", lamp: "#5a5032", shadow: "#16181c" },
+  shade: { line: SHADE, soft: SHADE, fill: SHADE, glass: SHADE, lamp: SHADE, shadow: "transparent" },
 };
 
 // Drawn in a 220×100 box, wheels on y=100, front three-quarter view.
@@ -88,6 +93,37 @@ function HangingShirt({ tone = "ink" }: { tone?: Tone }) {
   );
 }
 
+// Drawn in a 50×100 box, base on y=100: serum bottle with a dropper cap, label facing.
+function Serum({ tone = "ink" }: { tone?: Tone }) {
+  const t = TONES[tone];
+  return (
+    <g strokeLinejoin="round" strokeLinecap="round">
+      <ellipse cx="25" cy="99" rx="27" ry="3.5" fill={t.shadow} />
+      <path d="M18 31 V18 Q18 6 25 6 Q32 6 32 18 V31 Z" fill={t.line} stroke={t.line} strokeWidth="2" />
+      <rect x="14" y="30" width="22" height="10" rx="1.5" fill={t.fill} stroke={t.line} strokeWidth="2" />
+      <path d="M16 40 H34 Q46 41 46 52 V93 Q46 100 39 100 H11 Q4 100 4 93 V52 Q4 41 16 40 Z" fill={t.glass} stroke={t.line} strokeWidth="2.5" />
+      <rect x="9" y="56" width="32" height="31" rx="2" fill={t.fill} stroke={t.line} strokeWidth="1.8" />
+      <rect x="9" y="61" width="32" height="7" fill={t.lamp} stroke={t.line} strokeWidth="1.6" />
+      <path d="M15 75 H35 M15 81 H29" stroke={t.soft} strokeWidth="1.8" />
+    </g>
+  );
+}
+
+// Drawn in a 70×50 box, base on y=50: cream jar with a screw lid.
+function Jar({ tone = "ink" }: { tone?: Tone }) {
+  const t = TONES[tone];
+  return (
+    <g strokeLinejoin="round" strokeLinecap="round">
+      <ellipse cx="35" cy="49" rx="34" ry="3" fill={t.shadow} />
+      <path d="M8 17 H62 V42 Q62 50 54 50 H16 Q8 50 8 42 Z" fill={t.glass} stroke={t.line} strokeWidth="2.5" />
+      <rect x="15" y="24" width="40" height="19" rx="2" fill={t.fill} stroke={t.line} strokeWidth="1.8" />
+      <path d="M21 30 H49 M21 36 H41" stroke={t.soft} strokeWidth="1.8" />
+      <rect x="5" y="4" width="60" height="14" rx="3" fill={t.fill} stroke={t.line} strokeWidth="2.5" />
+      <path d="M14 7 V15 M24 7 V15 M34 7 V15 M44 7 V15 M54 7 V15" stroke={t.soft} strokeWidth="1.6" />
+    </g>
+  );
+}
+
 function Corners({ x, y, w, h, len = 14 }: { x: number; y: number; w: number; h: number; len?: number }) {
   const d = `M${x} ${y + len}V${y}H${x + len}M${x + w - len} ${y}H${x + w}V${y + len}M${x + w} ${y + h - len}V${y + h}H${x + w - len}M${x + len} ${y + h}H${x}V${y + h - len}`;
   return <path d={d} fill="none" stroke={AMBER} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />;
@@ -100,6 +136,18 @@ function Phone({ x, y, tone = "ink" }: { x: number; y: number; tone?: Tone }) {
       <rect width="13" height="22" rx="2.5" fill={t.fill} stroke={t.line} strokeWidth="2" />
       <circle cx="6.5" cy="5" r="1.8" fill={t.line} />
     </g>
+  );
+}
+
+// Phone held flat at the top of a 160-wide tile, pointing down at whatever is below.
+function PhoneDown({ cx }: { cx: number }) {
+  return (
+    <>
+      <g transform={`translate(${cx - 6.5} 4) rotate(90 6.5 11)`}>
+        <Phone x={0} y={0} />
+      </g>
+      <path d={`M${cx} 24 V36 M${cx - 5} 31 L${cx} 37 L${cx + 5} 31`} fill="none" stroke={AMBER} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </>
   );
 }
 
@@ -192,44 +240,58 @@ const CarDark = ({ label }: ArtProps) => (
 );
 
 const TABLE = "#e9ecf0";
+const TABLE_SHADOW = "#dde1e7";
+const DIM_TABLE = "#23262b";
+const DIM_EDGE = "#33373f";
 
-const D2cGood = ({ label }: ArtProps) => (
+// 320×200 hero scene: a side table on the floor. Items stand on its top at y=147,
+// and the frame corners end on the table top (y 136–158), clear of its edges.
+function HeroTable() {
+  return (
+    <>
+      <path d="M0 190 H320" stroke={GREY} strokeWidth="1.5" />
+      <g stroke={INK} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M260 150 V182" stroke={GREY} />
+        <path d="M94 166 V190 M222 166 V190" />
+        <path d="M84 158 L120 136 H268 L232 158 Z" fill={TABLE} />
+        <path d="M84 158 H232 V166 H84 Z M232 158 L268 136 V144 L232 166 Z" fill="#fff" />
+      </g>
+    </>
+  );
+}
+
+function Glare({ x, y }: { x: number; y: number }) {
+  return (
+    <>
+      <circle cx={x} cy={y} r="6" fill="#fff" opacity="0.85" />
+      <circle cx={x} cy={y} r="13" fill="#fff" opacity="0.15" />
+    </>
+  );
+}
+
+// Fashion: one outfit on a hanger, never next to anything else.
+
+const FashionGood = ({ label }: ArtProps) => (
   <Frame label={label} w={320} h={200}>
-    <path d="M0 184 H320" stroke={GREY} strokeWidth="1.5" />
-    <g stroke={INK} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
-      <path d="M176 133 V176" stroke={GREY} />
-      <path d="M44 147 V184 M150 147 V184" />
-      <path d="M34 140 L58 126 H182 L158 140 Z" fill={TABLE} />
-      <path d="M34 140 H158 V147 H34 Z M158 140 L182 126 V133 L158 147 Z" fill="#fff" />
-    </g>
-    <path d="M27 108 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
-    <g transform="translate(62 61) scale(0.75)">
-      <GiftBox />
-    </g>
-    <g transform="translate(196 60) scale(0.72)">
+    <path d="M0 190 H320" stroke={GREY} strokeWidth="1.5" />
+    <path d="M27 96 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
+    <g transform="translate(110 22) scale(1.3)">
       <HangingShirt />
     </g>
-    <Phone x={10} y={97} />
-    <Corners x={48} y={56} w={100} h={100} len={12} />
-    <Corners x={186} y={50} w={92} h={104} len={12} />
-    <circle cx="167" cy="108" r="11" fill="#fff" stroke={GREY} strokeWidth="1.5" />
-    <text x="167" y="112" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="12" fontWeight="700" fill={MUTED}>
-      or
-    </text>
+    <Phone x={10} y={85} />
+    <Corners x={92} y={14} w={166} h={170} />
   </Frame>
 );
 
-const D2cCropped = ({ label }: ArtProps) => (
+const FashionCropped = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <rect y="108" width="160" height="12" fill={TABLE} />
-    <path d="M0 108 H160" stroke={GREY} strokeWidth="1.5" />
-    <g transform="translate(-30 -22) scale(1.3)">
-      <GiftBox />
+    <g transform="translate(-20 -4) scale(2)">
+      <HangingShirt />
     </g>
   </Frame>
 );
 
-const D2cAbove = ({ label }: ArtProps) => (
+const FashionAbove = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
     <rect width="160" height="120" fill="#e3e6eb" />
     <rect width="160" height="5" fill={GREY} />
@@ -246,14 +308,83 @@ const D2cAbove = ({ label }: ArtProps) => (
         ))}
       </g>
     </g>
-    <g transform="translate(80 4) rotate(90 6.5 11)">
-      <Phone x={0} y={0} />
-    </g>
-    <path d="M86.5 24 V36 M81.5 31 L86.5 37 L91.5 31" fill="none" stroke={AMBER} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <PhoneDown cx={86.5} />
   </Frame>
 );
 
-const D2cCluttered = ({ label }: ArtProps) => (
+// Other clothes on the same rail, and a person beside it. Hooks sit on the rail at y=16.
+const FashionCluttered = ({ label }: ArtProps) => (
+  <Frame label={label} w={160} h={120}>
+    <path d="M-2 16 H162" stroke={GREY} strokeWidth="3" />
+    {[-34, -2].map((x) => (
+      <g key={x} transform={`translate(${x} 10.4) scale(0.7)`}>
+        <HangingShirt tone="muted" />
+      </g>
+    ))}
+    <g transform="translate(32 10.4) scale(0.7)">
+      <HangingShirt />
+    </g>
+    <g stroke={INK} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
+      <path d="M94 120 V86 Q94 68 111 68 H115 Q132 68 132 86 V120" />
+      <circle cx="113" cy="55" r="9" />
+    </g>
+  </Frame>
+);
+
+const FashionDark = ({ label }: ArtProps) => (
+  <Frame label={label} w={160} h={120} dark>
+    <g transform="translate(57 26) scale(0.62)">
+      <path d={SHIRT} fill={SHADE} />
+    </g>
+    <g transform="translate(48 20) scale(0.62)">
+      <HangingShirt tone="dim" />
+    </g>
+    <Glare x={80} y={52} />
+  </Frame>
+);
+
+// Gifting: one closed gift box on a table.
+
+const GiftGood = ({ label }: ArtProps) => (
+  <Frame label={label} w={320} h={200}>
+    <HeroTable />
+    <path d="M27 109 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
+    <g transform="translate(127 52) scale(0.95)">
+      <GiftBox />
+    </g>
+    <Phone x={10} y={98} />
+    <Corners x={114} y={46} w={114} h={109} len={12} />
+  </Frame>
+);
+
+const GiftCropped = ({ label }: ArtProps) => (
+  <Frame label={label} w={160} h={120}>
+    <rect y="108" width="160" height="12" fill={TABLE} />
+    <path d="M0 108 H160" stroke={GREY} strokeWidth="1.5" />
+    <g transform="translate(-30 -22) scale(1.3)">
+      <GiftBox />
+    </g>
+  </Frame>
+);
+
+// Seen from high up: mostly the lid (far edge narrower), with a thin strip of the front showing.
+const GiftAbove = ({ label }: ArtProps) => (
+  <Frame label={label} w={160} h={120}>
+    <rect width="160" height="120" fill={TABLE} />
+    <g stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <ellipse cx="84" cy="112" rx="46" ry="5" fill={TABLE_SHADOW} stroke="none" />
+      <rect x="47" y="103" width="70" height="8" fill="#fff" strokeWidth="2.5" />
+      <rect x="43" y="96" width="78" height="8" fill="#fff" strokeWidth="2.5" />
+      <path d="M49 43 H115 L121 96 H43 Z" fill="#fff" strokeWidth="2.5" />
+      <path d="M46.6 64 H117.4 L118.7 76 H45.3 Z M77 43 H87 L88 96 H76 Z M76 96 H88 V104 H76 Z M76 103 H88 V111 H76 Z" fill={AMBER} strokeWidth="1.8" />
+      <path d="M82 70 C70 55 55 61 61 73 C65 81 76 77 82 70 Z M82 70 C94 55 109 61 103 73 C99 81 88 77 82 70 Z" fill={AMBER} strokeWidth="2" />
+      <ellipse cx="82" cy="70" rx="5" ry="4" fill={AMBER} strokeWidth="2" />
+    </g>
+    <PhoneDown cx={82} />
+  </Frame>
+);
+
+const GiftCluttered = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
     <g strokeLinejoin="round" strokeLinecap="round">
       {[
@@ -286,37 +417,152 @@ const D2cCluttered = ({ label }: ArtProps) => (
   </Frame>
 );
 
-const D2cDark = ({ label }: ArtProps) => (
+const GiftDark = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120} dark>
-    <g transform="translate(57 26) scale(0.62)">
-      <path d={SHIRT} fill="#121418" />
+    <rect y="100" width="160" height="20" fill={DIM_TABLE} />
+    <path d="M0 100 H160" stroke={DIM_EDGE} strokeWidth="1.5" />
+    <g transform="translate(55 22) scale(0.74)">
+      <GiftBox tone="shade" />
     </g>
-    <g transform="translate(48 20) scale(0.62)">
-      <HangingShirt tone="dim" />
+    <g transform="translate(45 26) scale(0.74)">
+      <GiftBox tone="dim" />
     </g>
-    <circle cx="80" cy="52" r="6" fill="#fff" opacity="0.85" />
-    <circle cx="80" cy="52" r="13" fill="#fff" opacity="0.15" />
+    <Glare x={66} y={80} />
+  </Frame>
+);
+
+// Skincare: one bottle standing upright on a table, label facing.
+
+const SkinGood = ({ label }: ArtProps) => (
+  <Frame label={label} w={320} h={200}>
+    <HeroTable />
+    <path d="M27 100 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
+    <g transform="translate(146.5 37) scale(1.1)">
+      <Serum />
+    </g>
+    <Phone x={10} y={89} />
+    <Corners x={130} y={28} w={88} h={127} len={12} />
+  </Frame>
+);
+
+const SkinCropped = ({ label }: ArtProps) => (
+  <Frame label={label} w={160} h={120}>
+    <rect y="100" width="160" height="20" fill={TABLE} />
+    <path d="M0 100 H160" stroke={GREY} strokeWidth="1.5" />
+    <g transform="translate(36 -22) scale(1.5)">
+      <Serum />
+    </g>
+  </Frame>
+);
+
+// Seen from above: the tops of the shoulders and collar show as rings, the body narrows away.
+const SkinAbove = ({ label }: ArtProps) => (
+  <Frame label={label} w={160} h={120}>
+    <rect width="160" height="120" fill={TABLE} />
+    <g stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+      <ellipse cx="86" cy="113" rx="30" ry="5" fill={TABLE_SHADOW} stroke="none" />
+      <path d="M54 74 L60 104 Q62 113 82 113 Q102 113 104 104 L110 74 Z" fill={TONES.ink.glass} strokeWidth="2.5" />
+      <path d="M57.5 89 Q82 98 106.5 89 L103.5 103 Q82 111 60.5 103 Z" fill="#fff" strokeWidth="1.8" />
+      <path d="M58.6 94.5 Q82 103 105.4 94.5" fill="none" stroke={AMBER} strokeWidth="4" strokeLinecap="butt" />
+      <ellipse cx="82" cy="74" rx="28" ry="14" fill={TONES.ink.glass} strokeWidth="2.5" />
+      <path d="M69 66 V73 Q82 80 95 73 V66" fill="#fff" strokeWidth="2" />
+      <ellipse cx="82" cy="66" rx="13" ry="6.5" fill="#fff" strokeWidth="2" />
+      <path d="M74 66 Q74 51 82 51 Q90 51 90 66 Q82 70 74 66 Z" fill={INK} strokeWidth="2" />
+    </g>
+    <PhoneDown cx={82} />
+  </Frame>
+);
+
+// A hand gripping the bottle, with a tube and a jar crowding it.
+const SkinCluttered = ({ label }: ArtProps) => (
+  <Frame label={label} w={160} h={120}>
+    <rect y="100" width="160" height="20" fill={TABLE} />
+    <path d="M0 100 H160" stroke={GREY} strokeWidth="1.5" />
+    <g stroke={TONES.muted.line} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill={TONES.muted.fill}>
+      <path d="M8 90 L4 36 H30 L26 90 Z" />
+      <path d="M5 41 H29" fill="none" />
+      <rect x="10" y="89" width="14" height="11" rx="1.5" />
+    </g>
+    <g transform="translate(18 70) scale(0.6)">
+      <Jar tone="muted" />
+    </g>
+    <g transform="translate(56 18) scale(0.82)">
+      <Serum />
+    </g>
+    <g stroke={INK} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
+      <path d="M160 60 H136 Q124 60 124 71 V77 Q124 88 136 88 H160" />
+      {[62, 68.5, 75, 81.5].map((y) => (
+        <rect key={y} x="78" y={y} width="48" height="6.5" rx="3.25" />
+      ))}
+    </g>
+  </Frame>
+);
+
+const SkinDark = ({ label }: ArtProps) => (
+  <Frame label={label} w={160} h={120} dark>
+    <rect y="100" width="160" height="20" fill={DIM_TABLE} />
+    <path d="M0 100 H160" stroke={DIM_EDGE} strokeWidth="1.5" />
+    <g transform="translate(70 16) scale(0.8)">
+      <Serum tone="shade" />
+    </g>
+    <g transform="translate(60 20) scale(0.8)">
+      <Serum tone="dim" />
+    </g>
+    <Glare x={88} y={58} />
   </Frame>
 );
 
 type Art = (p: ArtProps) => ReactNode;
-// `alt` (optional) describes what a drawing shows, for screen readers. Without it the label uses the caption / avoid copy.
-const ART: Record<IndustryKey, { good: Art; caption: string; alt?: string; avoid: Record<string, Art>; avoidAlt?: Record<string, string> }> = {
+type AvoidId = (typeof INDUSTRIES)[IndustryKey]["photoAvoid"][number]["id"];
+// Every vertical needs its own full set, so no vertical ever shows another's product.
+// `alt` / `avoidAlt` describe what each drawing shows, for screen readers.
+const ART: Record<IndustryKey, { good: Art; caption: string; alt: string; avoid: Record<AvoidId, Art>; avoidAlt: Record<AvoidId, string> }> = {
   automotive: {
     good: CarGood,
     caption: "Whole car in view, shot from the front corner, phone at headlight height.",
+    alt: "A whole car seen from its front corner, with space around it. The phone is held low, level with the headlights.",
     avoid: { cropped: CarCropped, above: CarAbove, cluttered: CarCluttered, dark: CarDark },
-  },
-  d2c: {
-    good: D2cGood,
-    caption: "Gift box closed on a table, or clothes on a hanger. Whole product in view, phone level with it.",
-    alt: "A closed gift box with a ribbon standing on a table, or a shirt on a hanger against a plain wall. Each has space around it and the phone is held level with its middle.",
-    avoid: { cropped: D2cCropped, above: D2cAbove, cluttered: D2cCluttered, dark: D2cDark },
     avoidAlt: {
-      cropped: "A gift box so close that its top and left side are cut off by the frame.",
+      cropped: "A car so close that its front bumper and front wheel are cut off by the frame.",
+      above: "A car seen from above, with the phone pointing down at its roof.",
+      cluttered: "A car with a person standing in front of it, and a pole and another car behind it.",
+      dark: "A car at night, too dark to see clearly.",
+    },
+  },
+  fashion: {
+    good: FashionGood,
+    caption: "On a hanger against a plain wall. Whole outfit in view, phone at chest height.",
+    alt: "A shirt on a hanger, hung on a hook on a plain wall, with space around it. The phone is held level with the middle of the shirt.",
+    avoid: { cropped: FashionCropped, above: FashionAbove, cluttered: FashionCluttered, dark: FashionDark },
+    avoidAlt: {
+      cropped: "A shirt so close that its sleeves and hem are cut off by the frame.",
       above: "A shirt laid flat on a bed, shot from above with the phone pointing down.",
-      cluttered: "Hands holding a gift box in front of a busy shelf.",
+      cluttered: "A shirt squeezed between other clothes on a rail, with a person standing beside it.",
       dark: "A shirt on a hanger in a dark room, with flash glare and a hard shadow behind it.",
+    },
+  },
+  gifting: {
+    good: GiftGood,
+    caption: "Closed and standing on a table. Whole gift in view, phone level with its middle.",
+    alt: "A closed gift box with a ribbon and bow, standing on a table with space around it. The phone is held level with the middle of the box.",
+    avoid: { cropped: GiftCropped, above: GiftAbove, cluttered: GiftCluttered, dark: GiftDark },
+    avoidAlt: {
+      cropped: "A gift box so close that its bow and left side are cut off by the frame.",
+      above: "A gift box seen from high above, with the phone pointing down at its lid.",
+      cluttered: "Hands holding a gift box in front of a busy shelf.",
+      dark: "A gift box in a dark room, with flash glare and a hard shadow behind it.",
+    },
+  },
+  skincare: {
+    good: SkinGood,
+    caption: "Standing upright on a table, label facing you. Whole product in view, phone level with it.",
+    alt: "A serum bottle with a dropper cap, standing upright on a table with its label facing forward and space around it. The phone is held level with the middle of the bottle.",
+    avoid: { cropped: SkinCropped, above: SkinAbove, cluttered: SkinCluttered, dark: SkinDark },
+    avoidAlt: {
+      cropped: "A serum bottle so close that its dropper cap and base are cut off by the frame.",
+      above: "A serum bottle seen from above, with the phone pointing down at its cap.",
+      cluttered: "A hand holding a serum bottle, with a tube and a jar crowding it.",
+      dark: "A serum bottle in a dark room, with a bright flash spot on the glass and a hard shadow behind it.",
     },
   },
 };
@@ -372,11 +618,11 @@ export default function PhotoGuide({ industry, defaultOpen }: { industry: Indust
       <div style={{ padding: "0 14px 16px" }}>
         <figure style={{ margin: 0 }}>
           <div style={{ position: "relative" }}>
-            <Good label={`Drawing of a good photo. ${art.alt ?? art.caption}`} />
+            <Good label={`Drawing of a good photo. ${art.alt}`} />
             <Badge ok />
           </div>
           <figcaption style={{ fontSize: 14, color: MUTED, marginTop: 8, lineHeight: 1.4 }}>
-            <b style={{ color: GREEN }}>Like this:</b> {art.caption}
+            <b style={{ color: GREEN_TEXT }}>Like this:</b> {art.caption}
           </figcaption>
         </figure>
 
@@ -400,7 +646,7 @@ export default function PhotoGuide({ industry, defaultOpen }: { industry: Indust
             return (
               <li key={avoid.id} style={{ border: "1px solid #eceef2", borderRadius: 10, padding: 6, display: "flex", flexDirection: "column", gap: 2 }}>
                 <div style={{ position: "relative", marginBottom: 4 }}>
-                  {Thumb && <Thumb label={`Drawing of a photo to avoid: ${art.avoidAlt?.[avoid.id] ?? avoid.detail}`} />}
+                  <Thumb label={`Drawing of a photo to avoid: ${art.avoidAlt[avoid.id]}`} />
                   <Badge />
                 </div>
                 <b style={{ fontSize: 14, color: INK }}>{avoid.title}</b>
