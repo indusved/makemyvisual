@@ -43,19 +43,47 @@ function Car({ tone = "ink" }: { tone?: Tone }) {
   );
 }
 
-// Drawn in an 80×140 box, base on y=140.
-function Bottle({ tone = "ink" }: { tone?: Tone }) {
+// Drawn in a 100×100 box, base on y=100, front three-quarter view. Closed lid, ribbon and bow.
+function GiftBox({ tone = "ink" }: { tone?: Tone }) {
   const t = TONES[tone];
   return (
     <g strokeLinejoin="round" strokeLinecap="round">
-      <ellipse cx="40" cy="140" rx="42" ry="4.5" fill={t.shadow} />
-      <rect x="27" y="1" width="26" height="20" rx="3" fill={t.line} stroke={t.line} strokeWidth="2.5" />
-      <rect x="31" y="21" width="18" height="9" fill={t.fill} stroke={t.line} strokeWidth="2.2" />
-      <path d="M31 30 C31 40 10 42 10 56 V131 Q10 139 18 139 H62 Q70 139 70 131 V56 C70 42 49 40 49 30 Z" fill={t.glass} stroke={t.line} strokeWidth="2.5" />
-      <rect x="16" y="70" width="48" height="46" rx="3" fill={t.fill} stroke={t.line} strokeWidth="2" />
-      <rect x="16" y="82" width="48" height="10" fill={t.lamp} />
-      <path d="M24 101 H56 M28 108 H52" stroke={t.soft} strokeWidth="2" />
-      <path d="M16 58 V64" stroke={t.fill} strokeWidth="3" />
+      <ellipse cx="49" cy="97" rx="46" ry="5" fill={t.shadow} />
+      <path d="M68 46 L86 36 V90 L68 100 Z" fill={t.glass} stroke={t.line} strokeWidth="2.5" />
+      <rect x="8" y="46" width="60" height="54" fill={t.fill} stroke={t.line} strokeWidth="2.5" />
+      <path d="M32 46 H44 V100 H32 Z M75.2 42 L78.8 40 V94 L75.2 96 Z" fill={t.lamp} stroke={t.line} strokeWidth="1.8" />
+      <path d="M4 32 L22 22 H90 L72 32 Z" fill={t.fill} stroke={t.line} strokeWidth="2.5" />
+      <path d="M72 32 L90 22 V38 L72 48 Z" fill={t.glass} stroke={t.line} strokeWidth="2.5" />
+      <rect x="4" y="32" width="68" height="16" fill={t.fill} stroke={t.line} strokeWidth="2.5" />
+      <path
+        d="M9.4 29 H77.4 L84.6 25 H16.6 Z M32 32 H44 L62 22 H50 Z M32 32 H44 V48 H32 Z M79.2 28 L82.8 26 V42 L79.2 44 Z"
+        fill={t.lamp}
+        stroke={t.line}
+        strokeWidth="1.8"
+      />
+      <path d="M47 25 C40 11 25 11 27 21 C28 27 40 27 47 25 Z M47 25 C54 11 69 11 67 21 C66 27 54 27 47 25 Z" fill={t.lamp} stroke={t.line} strokeWidth="2" />
+      <ellipse cx="47" cy="25" rx="4.5" ry="3.5" fill={t.lamp} stroke={t.line} strokeWidth="2" />
+    </g>
+  );
+}
+
+// Outline of a shirt on a hanger, in a 100×116 box.
+const SHIRT = "M42 18 L16 30 L8 88 L19 90 L25 50 V104 Q26 114 50 114 Q74 114 75 104 V50 L81 90 L92 88 L84 30 L58 18 Q50 24 42 18 Z";
+
+// Drawn in a 100×116 box: nail at the top, hanger hook, shirt hanging below.
+function HangingShirt({ tone = "ink" }: { tone?: Tone }) {
+  const t = TONES[tone];
+  return (
+    <g strokeLinejoin="round" strokeLinecap="round">
+      <path d="M50 21 V10 A4 4 0 0 1 58 10 V12" fill="none" stroke={t.line} strokeWidth="2.2" />
+      <circle cx="54" cy="8" r="2" fill={t.line} />
+      <path d={SHIRT} fill={t.fill} stroke={t.line} strokeWidth="2.5" />
+      <path d="M25 50 L21 31 M75 50 L79 31 M9.5 80 L20 82 M90.5 80 L80 82 M50 28 V114" fill="none" stroke={t.soft} strokeWidth="1.8" />
+      <rect x="30" y="42" width="12" height="12" rx="1.5" fill="none" stroke={t.soft} strokeWidth="1.8" />
+      <path d="M42 18 L50 29 L43 34 L37 20.5 Z M58 18 L50 29 L57 34 L63 20.5 Z" fill={t.glass} stroke={t.line} strokeWidth="2" />
+      {[42, 56, 70, 84, 98].map((y) => (
+        <circle key={y} cx="50" cy={y} r="1.8" fill={t.line} />
+      ))}
     </g>
   );
 }
@@ -163,95 +191,133 @@ const CarDark = ({ label }: ArtProps) => (
   </Frame>
 );
 
-const BottleGood = ({ label }: ArtProps) => (
+const TABLE = "#e9ecf0";
+
+const D2cGood = ({ label }: ArtProps) => (
   <Frame label={label} w={320} h={200}>
-    <rect y="150" width="320" height="50" fill="#e9ecf0" />
-    <path d="M0 150 H320" stroke={GREY} strokeWidth="1.5" />
-    <path d="M27 115 H150" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
-    <g transform="translate(126 40) scale(0.85)">
-      <Bottle />
+    <path d="M0 184 H320" stroke={GREY} strokeWidth="1.5" />
+    <g stroke={INK} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M176 133 V176" stroke={GREY} />
+      <path d="M44 147 V184 M150 147 V184" />
+      <path d="M34 140 L58 126 H182 L158 140 Z" fill={TABLE} />
+      <path d="M34 140 H158 V147 H34 Z M158 140 L182 126 V133 L158 147 Z" fill="#fff" />
     </g>
-    <Phone x={10} y={104} />
-    <Corners x={98} y={24} w={124} h={152} len={12} />
+    <path d="M27 108 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
+    <g transform="translate(62 61) scale(0.75)">
+      <GiftBox />
+    </g>
+    <g transform="translate(196 60) scale(0.72)">
+      <HangingShirt />
+    </g>
+    <Phone x={10} y={97} />
+    <Corners x={48} y={56} w={100} h={100} len={12} />
+    <Corners x={186} y={50} w={92} h={104} len={12} />
+    <circle cx="167" cy="108" r="11" fill="#fff" stroke={GREY} strokeWidth="1.5" />
+    <text x="167" y="112" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="12" fontWeight="700" fill={MUTED}>
+      or
+    </text>
   </Frame>
 );
 
-const BottleCropped = ({ label }: ArtProps) => (
+const D2cCropped = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <rect y="104" width="160" height="16" fill="#e9ecf0" />
-    <path d="M0 104 H160" stroke={GREY} strokeWidth="1.5" />
-    <g transform="translate(36 -26) scale(1.12)">
-      <Bottle />
+    <rect y="108" width="160" height="12" fill={TABLE} />
+    <path d="M0 108 H160" stroke={GREY} strokeWidth="1.5" />
+    <g transform="translate(-30 -22) scale(1.3)">
+      <GiftBox />
     </g>
   </Frame>
 );
 
-const BottleAbove = ({ label }: ArtProps) => (
+const D2cAbove = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <rect width="160" height="120" fill="#e9ecf0" />
+    <rect width="160" height="120" fill="#e3e6eb" />
+    <rect width="160" height="5" fill={GREY} />
+    <path d="M10 74 Q22 66 32 78 M120 110 Q134 102 152 108 M128 46 Q140 52 152 48" fill="none" stroke="#cdd1d8" strokeWidth="1.5" strokeLinecap="round" />
     <g strokeLinejoin="round" strokeLinecap="round">
-      <ellipse cx="88" cy="104" rx="34" ry="10" fill={TONES.ink.shadow} />
-      <path d="M50 60 L60 102 A22 7 0 0 0 104 102 L114 60 Z" fill={TONES.ink.glass} stroke={INK} strokeWidth="2.5" />
-      <path d="M53 74 Q82 84 111 74 L109 84 Q82 94 55 84 Z" fill={AMBER} />
-      <ellipse cx="82" cy="60" rx="32" ry="14" fill={TONES.ink.glass} stroke={INK} strokeWidth="2.5" />
-      <path d="M70 46 V56 A12 5 0 0 0 94 56 V46" fill={INK} stroke={INK} strokeWidth="2" />
-      <ellipse cx="82" cy="46" rx="12" ry="5" fill="#3a3e46" stroke={INK} strokeWidth="2" />
-      <path d="M58 56 Q64 50 72 49" fill="none" stroke="#fff" strokeWidth="2.5" />
+      <path d="M11 13 Q34 8 57 13 Q62 25 57 37 Q34 42 11 37 Q6 25 11 13 Z" fill="#fff" stroke={INK} strokeWidth="2" />
+      <path d="M17 25 Q34 21 51 25" fill="none" stroke={GREY} strokeWidth="1.5" />
+      <g transform="translate(46 36) scale(0.8)">
+        <path d="M42 4 L28 9 L6 30 L16 42 L30 30 V98 H70 V30 L84 42 L94 30 L72 9 L58 4 Q50 10 42 4 Z" fill="#fff" stroke={INK} strokeWidth="2.5" />
+        <path d="M30 30 L27 12 M70 30 L73 12 M50 15 V98" fill="none" stroke={GREY} strokeWidth="2" />
+        <path d="M42 4 L50 15 L43 20 L37 6.5 Z M58 4 L50 15 L57 20 L63 6.5 Z" fill={TONES.ink.glass} stroke={INK} strokeWidth="2" />
+        {[32, 50, 68, 86].map((y) => (
+          <circle key={y} cx="50" cy={y} r="2" fill={INK} />
+        ))}
+      </g>
     </g>
-    <g transform="translate(14 4) rotate(90 6.5 11)">
+    <g transform="translate(80 4) rotate(90 6.5 11)">
       <Phone x={0} y={0} />
     </g>
-    <path d="M20 24 V36 M15 31 L20 37 L25 31" fill="none" stroke={AMBER} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M86.5 24 V36 M81.5 31 L86.5 37 L91.5 31" fill="none" stroke={AMBER} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
   </Frame>
 );
 
-const BottleCluttered = ({ label }: ArtProps) => (
+const D2cCluttered = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <g stroke="#d3d6dc" strokeWidth="5">
-      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-        <path key={i} d={`M${i * 24 - 40} 0 L${i * 24 + 40} 104`} />
+    <g strokeLinejoin="round" strokeLinecap="round">
+      {[
+        [4, 18, "#c9ccd2"], [12, 22, "#e3e5e9"], [20, 14, "#b4b8c0"], [28, 20, "#d3d6dc"], [36, 24, "#c9ccd2"], [44, 16, "#e3e5e9"],
+      ].map(([x, h, c]) => (
+        <rect key={x} x={x as number} y={40 - (h as number)} width="7" height={h as number} fill={c as string} stroke={GREY} strokeWidth="1" />
       ))}
+      <path d="M0 40 H160" stroke={GREY} strokeWidth="3" />
+      {/* Plant shifted left so the ✕ badge sits on empty wall. */}
+      <g transform="translate(-34 0)">
+        <path d="M108 40 L111 30 H125 L128 40 Z" fill="#fff" stroke={GREY} strokeWidth="1.5" />
+        <g stroke={GREEN} strokeWidth="1.8" fill="#cfe6d5">
+          <path d="M118 30 Q112 18 104 14 Q114 14 118 30 Z M118 30 Q122 16 130 12 Q128 24 118 30 Z" />
+        </g>
+      </g>
     </g>
-    <rect y="104" width="160" height="16" fill="#e9ecf0" />
-    <path d="M0 104 H160" stroke={GREY} strokeWidth="1.5" />
-    <g strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" stroke={GREEN}>
-      <path d="M24 104 Q16 80 26 58 M26 104 Q32 84 44 72" fill="none" />
-      <path d="M26 58 Q14 52 12 40 Q26 44 26 58 Z M44 72 Q50 60 60 60 Q56 74 44 72 Z" fill="#cfe6d5" />
-    </g>
-    <g transform="translate(58 36) scale(0.48)">
-      <Bottle />
+    <g transform="translate(44 38) scale(0.72)">
+      <GiftBox />
     </g>
     <g stroke={INK} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
-      <path d="M160 58 H118 Q104 58 104 72 V86 Q104 98 118 98 H160" />
-      {[64, 72, 80, 88].map((y) => (
-        <rect key={y} x="80" y={y} width="34" height="8" rx="4" />
+      <path d="M0 74 H28 Q40 74 40 85 V91 Q40 102 28 102 H0" />
+      {[76, 82.5, 89, 95.5].map((y) => (
+        <rect key={`l${y}`} x="38" y={y} width="20" height="6.5" rx="3.25" />
+      ))}
+      <path d="M160 74 H132 Q120 74 120 85 V91 Q120 102 132 102 H160" />
+      {[76, 82.5, 89, 95.5].map((y) => (
+        <rect key={`r${y}`} x="100" y={y} width="20" height="6.5" rx="3.25" />
       ))}
     </g>
   </Frame>
 );
 
-const BottleDark = ({ label }: ArtProps) => (
+const D2cDark = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120} dark>
-    <rect y="104" width="160" height="16" fill="#23262c" />
-    <g transform="translate(60 36) scale(0.48)">
-      <Bottle tone="dim" />
+    <g transform="translate(57 26) scale(0.62)">
+      <path d={SHIRT} fill="#121418" />
     </g>
-    <circle cx="74" cy="64" r="9" fill="#fff" opacity="0.85" />
-    <circle cx="74" cy="64" r="16" fill="#fff" opacity="0.15" />
+    <g transform="translate(48 20) scale(0.62)">
+      <HangingShirt tone="dim" />
+    </g>
+    <circle cx="80" cy="52" r="6" fill="#fff" opacity="0.85" />
+    <circle cx="80" cy="52" r="13" fill="#fff" opacity="0.15" />
   </Frame>
 );
 
 type Art = (p: ArtProps) => ReactNode;
-const ART: Record<IndustryKey, { good: Art; caption: string; avoid: Record<string, Art> }> = {
+// `alt` (optional) describes what a drawing shows, for screen readers. Without it the label uses the caption / avoid copy.
+const ART: Record<IndustryKey, { good: Art; caption: string; alt?: string; avoid: Record<string, Art>; avoidAlt?: Record<string, string> }> = {
   automotive: {
     good: CarGood,
     caption: "Whole car in view, shot from the front corner, phone at headlight height.",
     avoid: { cropped: CarCropped, above: CarAbove, cluttered: CarCluttered, dark: CarDark },
   },
   d2c: {
-    good: BottleGood,
-    caption: "Whole product in view, in front of a plain wall, phone at product height.",
-    avoid: { cropped: BottleCropped, above: BottleAbove, cluttered: BottleCluttered, dark: BottleDark },
+    good: D2cGood,
+    caption: "Gift box closed on a table, or clothes on a hanger. Whole product in view, phone level with it.",
+    alt: "A closed gift box with a ribbon standing on a table, or a shirt on a hanger against a plain wall. Each has space around it and the phone is held level with its middle.",
+    avoid: { cropped: D2cCropped, above: D2cAbove, cluttered: D2cCluttered, dark: D2cDark },
+    avoidAlt: {
+      cropped: "A gift box so close that its top and left side are cut off by the frame.",
+      above: "A shirt laid flat on a bed, shot from above with the phone pointing down.",
+      cluttered: "Hands holding a gift box in front of a busy shelf.",
+      dark: "A shirt on a hanger in a dark room, with flash glare and a hard shadow behind it.",
+    },
   },
 };
 
@@ -306,7 +372,7 @@ export default function PhotoGuide({ industry, defaultOpen }: { industry: Indust
       <div style={{ padding: "0 14px 16px" }}>
         <figure style={{ margin: 0 }}>
           <div style={{ position: "relative" }}>
-            <Good label={`Drawing of a good photo. ${art.caption}`} />
+            <Good label={`Drawing of a good photo. ${art.alt ?? art.caption}`} />
             <Badge ok />
           </div>
           <figcaption style={{ fontSize: 14, color: MUTED, marginTop: 8, lineHeight: 1.4 }}>
@@ -334,7 +400,7 @@ export default function PhotoGuide({ industry, defaultOpen }: { industry: Indust
             return (
               <li key={avoid.id} style={{ border: "1px solid #eceef2", borderRadius: 10, padding: 6, display: "flex", flexDirection: "column", gap: 2 }}>
                 <div style={{ position: "relative", marginBottom: 4 }}>
-                  {Thumb && <Thumb label={`Drawing of a photo to avoid: ${avoid.detail}`} />}
+                  {Thumb && <Thumb label={`Drawing of a photo to avoid: ${art.avoidAlt?.[avoid.id] ?? avoid.detail}`} />}
                   <Badge />
                 </div>
                 <b style={{ fontSize: 14, color: INK }}>{avoid.title}</b>

@@ -115,7 +115,7 @@ export default function NewAd({ industry, profile }: { industry: IndustryKey; pr
 
         <div role="group" aria-labelledby="photo-label" style={{ position: "relative" }}>
           <p id="photo-label" style={{ margin: 0 }}>Photo of your {copy.productNoun}</p>
-          <PhotoGuide industry={industry} defaultOpen={jobs?.length === 0} />
+          <PhotoGuide industry={industry} defaultOpen={jobs !== undefined && !jobs.some((job) => job.industry === industry)} />
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
             <button type="button" onClick={() => cameraRef.current?.click()} style={{ ...pickButton, background: INK, color: "#fff" }}>
