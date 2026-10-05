@@ -132,7 +132,9 @@ export default function AdResults({ job, offer, industry, onClose }: { job: Job;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [look, industry, job._id, job.photoUrl, offer.headline, offer.details, offer.validity, offer.finePrint, offer.businessName, offer.contact]);
 
-  const fileName = (ad: Rendered) => `makemyvisual-${config.path}-${look}-${ad.key}-${ad.width}x${ad.height}.png`;
+  // D2C background keys already start with "d2c-"; don't repeat it in the file name.
+  const lookName = look?.replace(`${config.path}-`, "") ?? "";
+  const fileName = (ad: Rendered) => `makemyvisual-${config.path}-${lookName}-${ad.key}-${ad.width}x${ad.height}.png`;
 
   async function downloadAll() {
     if (!ads) return;

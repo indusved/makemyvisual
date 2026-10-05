@@ -7,3 +7,6 @@
 - Sat 3 Oct: dealers can place their real car, cut out automatically, on a choice of backgrounds (backgrounds appear once generated)
 - Sat 3 Oct: cut-out cars now sit on the ground with a car-shaped contact shadow instead of floating
 - Sat 3 Oct: dealers can pick a 7th background, "Dealership floor"
+- Mon 5 Oct: D2C brands (gift hampers, fashion) can make ads at /d2c with 7 product backgrounds; car dealers keep /cars
+- Mon 5 Oct: first-time users set up their business (industry, India/US, name, phone/website) and it appears on every ad
+- Mon 5 Oct: a photo guide with do/avoid drawings, take-photo vs gallery buttons, and instant warnings for small, dark or blurry photos
