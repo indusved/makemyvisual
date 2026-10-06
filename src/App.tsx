@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../convex/_generated/api";
 import { BRAND, INDUSTRIES, SEASON, industryFromPath, productName, type IndustryKey } from "../convex/industries";
-import SignIn from "./SignIn";
+import SignIn, { hasPendingCode } from "./SignIn";
 import NewAd from "./NewAd";
+import { loadWords } from "./draft";
 import Brand, { Diya, Toran } from "./Brand";
 import Onboarding, { ChangeVertical, VerticalCards, type BusinessDetails } from "./Onboarding";
 import { ShowcaseRow, exampleImages, examplesFor, type MakeKind } from "./Showcase";
@@ -46,20 +47,25 @@ const SHORT_SIZE_NAMES: Record<string, string> = { whatsapp: "WhatsApp", status:
 
 const kindFromUrl = (): MakeKind => (new URLSearchParams(window.location.search).get("make") === "greeting" ? "greeting" : "offer");
 const makeSearch = (kind: MakeKind) => (kind === "greeting" ? "?make=greeting" : "");
-// The line under the logo: the vertical's offer tagline, or a greeting one when making a greeting.
+// The line under the logo for guests: the vertical's offer tagline, or a greeting one when making a greeting.
 const tagline = (industry: IndustryKey, kind: MakeKind) =>
   kind === "greeting"
-    ? `Make your ${INDUSTRIES[industry].businessNoun}'s Diwali greeting with your name on it, ready for WhatsApp, Instagram, email and a printed card in 2 minutes.`
+    ? `Make your ${INDUSTRIES[industry].businessNoun}'s Diwali greeting with your name on it, ready for WhatsApp, Instagram, email and print. ${SEASON.dateLabel}.`
     : INDUSTRIES[industry].tagline;
 
-function scrollToChooser() {
-  const target = document.getElementById("home-vertical");
+// Moves focus to a section and scrolls it to the top, smoothly unless reduced motion is on.
+function scrollToSection(id: string) {
+  const target = document.getElementById(id);
   if (!target) return;
   target.focus({ preventScroll: true });
   target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 }
+const scrollToChooser = () => scrollToSection("home-vertical");
 
 export default function App() {
+  const { isLoading, isAuthenticated } = useConvexAuth();
+  // undefined while the saved sign-in is still being checked.
+  const signedIn = isLoading ? undefined : isAuthenticated;
   const [urlIndustry, setUrlIndustry] = useState(() => industryFromPath(window.location.pathname));
   // "greeting" when the address has ?make=greeting: kept in the address through sign-in and every path change.
   const [makeKind, setMakeKind] = useState(kindFromUrl);
@@ -92,21 +98,21 @@ export default function App() {
   }, [goTo]);
 
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", color: INK, maxWidth: 560, margin: "40px auto 64px", padding: "0 16px" }}>
-      <AuthLoading>
-        <h1 style={heading}><Brand industry={urlIndustry ?? undefined} showSuffix={urlIndustry !== null} /></h1>
-        <p>Loading…</p>
-      </AuthLoading>
-      <Unauthenticated>
-        {urlIndustry ? (
-          <SignedOut industry={urlIndustry} kind={makeKind} onKind={chooseKind} />
-        ) : (
-          <Landing kind={makeKind} onKind={chooseKind} />
-        )}
-      </Unauthenticated>
-      <Authenticated>
-        <SignedIn urlIndustry={urlIndustry} goTo={goTo} kind={makeKind} onKind={chooseKind} />
-      </Authenticated>
+    <main style={{ fontFamily: "system-ui, sans-serif", color: INK, maxWidth: 560, margin: "20px auto 64px", padding: "0 16px" }}>
+      {urlIndustry ? (
+        // The same page in the same place for guests, loading and signed in, so the maker inside keeps
+        // everything typed and made when someone signs in.
+        <VerticalPage industry={urlIndustry} signedIn={signedIn} goTo={goTo} kind={makeKind} onKind={chooseKind} />
+      ) : signedIn === undefined ? (
+        <>
+          <h1 style={heading}><Brand showSuffix={false} /></h1>
+          <p>Loading…</p>
+        </>
+      ) : signedIn ? (
+        <SignedInHome goTo={goTo} kind={makeKind} />
+      ) : (
+        <Landing kind={makeKind} onKind={chooseKind} />
+      )}
     </main>
   );
 }
@@ -227,71 +233,105 @@ function Landing({ kind, onKind }: { kind: MakeKind; onKind: (kind: MakeKind) =>
   );
 }
 
-function SignedOut({ industry, kind, onKind }: { industry: IndustryKey; kind: MakeKind; onKind: (kind: MakeKind) => void }) {
-  const showcase = useQuery(api.showcase.list, { industry });
-  const examples = examplesFor(showcase, industry, kind);
-  const config = INDUSTRIES[industry];
-
-  return (
-    <>
-      <h1 style={heading}><Brand industry={industry} /></h1>
-      <p style={{ lineHeight: 1.45, margin: "0 0 20px" }}>{tagline(industry, kind)}</p>
-      {examples.some((i) => i.url) && (
-        <div style={{ margin: "0 0 12px" }}>
-          <ShowcaseRow items={examples} label={`Examples for ${config.chooserLabel}`} height={150} />
-        </div>
-      )}
-      <aside aria-live="polite" style={{ ...festiveNote, margin: "0 0 28px" }}>
-        <span style={{ paddingTop: 2 }}><Diya size={26} /></span>
-        <span style={{ lineHeight: 1.45 }}>
-          <b style={{ display: "block" }}>This Diwali: send a branded greeting to your customers</b>
-          <span style={{ display: "block", color: MUTED, fontSize: 15, marginTop: 2 }}>
-            {SEASON.dateLabel}.{" "}
-            {kind === "greeting"
-              ? `You'll start with your greeting after you sign in. A photo of your ${config.productNoun} is optional.`
-              : "Ready for WhatsApp, Instagram, email and printed cards."}
-          </span>
-          <button type="button" onClick={() => onKind(kind === "greeting" ? "offer" : "greeting")} style={{ ...linkButton, fontSize: 15 }}>
-            {kind === "greeting" ? "Make an offer ad instead" : "Start with a greeting"}
-          </button>
-        </span>
-      </aside>
-      <SignIn />
-      <p style={{ marginTop: 32, fontSize: 14 }}>
-        <a href={"/" + makeSearch(kind)} style={{ color: MUTED, display: "inline-flex", alignItems: "center", minHeight: 44 }}>
-          Sell something else? Choose another
-        </a>
-      </p>
-    </>
-  );
-}
-
 // First-time choice of vertical after signing in, with the same example pictures as the home page.
 function SetupChooser({ kind, onPick }: { kind: MakeKind; onPick: (industry: IndustryKey) => void }) {
   const showcase = useQuery(api.showcase.list, {});
   return <VerticalCards labelledBy="setup-vertical" onPick={onPick} images={exampleImages(showcase, kind)} badges={SEASON_BADGES} />;
 }
 
-function SignedIn({
-  urlIndustry,
+// One muted line: who is signed in (or their business), then the account links.
+function AccountLine({ children }: { children: ReactNode }) {
+  const { signOut } = useAuthActions();
+  return (
+    <div style={{ color: MUTED, fontSize: 14, display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 6, margin: "0 0 16px" }}>
+      {children}
+      <span aria-hidden="true">·</span>
+      <button type="button" onClick={() => void signOut()} style={linkButton}>Sign out</button>
+    </div>
+  );
+}
+
+// Signed in on "/": straight to their business's page once it loads, or the first-time "What do you sell?".
+function SignedInHome({ goTo, kind }: { goTo: (industry: IndustryKey | null) => void; kind: MakeKind }) {
+  const viewer = useQuery(api.users.viewer);
+  const profile = useQuery(api.profiles.mine);
+
+  // A saved business always wins over whatever vertical the address names.
+  const savedIndustry = profile?.industry;
+  useEffect(() => {
+    if (savedIndustry) goTo(savedIndustry);
+  }, [savedIndustry, goTo]);
+
+  if (profile !== null) {
+    return (
+      <>
+        <h1 style={heading}><Brand showSuffix={false} /></h1>
+        <p>Loading…</p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <h1 style={heading}><Brand showSuffix={false} /></h1>
+      <AccountLine>
+        <span style={{ overflowWrap: "anywhere" }}>{viewer?.email ?? "…"}</span>
+      </AccountLine>
+      <h2 id="setup-vertical" style={{ fontSize: 20, margin: "0 0 6px" }}>What do you sell?</h2>
+      <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 18px" }}>
+        {kind === "greeting"
+          ? "Pick one. Your Diwali greeting wording, photo tips and ad backgrounds will be made for it. You can change it later."
+          : "Pick one. Your backgrounds, photo tips and ad wording will be made for it. You can change it later."}
+      </p>
+      <SetupChooser kind={kind} onPick={goTo} />
+    </>
+  );
+}
+
+// A vertical's page for every sign-in state: the maker, plus sign-in and examples for guests, or the account line
+// and Edit business when signed in. Not keyed by vertical: only NewAd inside is.
+function VerticalPage({
+  industry,
+  signedIn,
   goTo,
   kind,
   onKind,
 }: {
-  urlIndustry: IndustryKey | null;
+  industry: IndustryKey;
+  signedIn: boolean | undefined;
   goTo: (industry: IndustryKey | null) => void;
   kind: MakeKind;
   onKind: (kind: MakeKind) => void;
 }) {
-  const viewer = useQuery(api.users.viewer);
-  const profile = useQuery(api.profiles.mine);
-  const { signOut } = useAuthActions();
+  // Skipped until signed in, so the profile reads as loading (undefined) until it is fresh, never a stale null.
+  const profile = useQuery(api.profiles.mine, signedIn ? {} : "skip");
+  const viewer = useQuery(api.users.viewer, signedIn ? {} : "skip");
+  const showcase = useQuery(api.showcase.list, signedIn === false ? { industry } : "skip");
+  const examples = examplesFor(showcase, industry, kind);
+  const hasExamples = examples.some((i) => i.url);
+  const config = INDUSTRIES[industry];
   const [mode, setMode] = useState<"ads" | "edit" | "change">("ads");
   // What the edit form holds when "Change what you sell" is tapped, saved along with the new vertical.
   const [draft, setDraft] = useState<BusinessDetails | null>(null);
-  // While an offer is saving, a vertical switch could file it under the new vertical, so editing waits.
-  const [savingOffer, setSavingOffer] = useState(false);
+  // While a job is saving, a vertical switch could file it under the new vertical, so editing waits.
+  const [saving, setSaving] = useState(false);
+  // Open again after a reload during the code step, unless the results (and their own sign-in step) come back.
+  const [showSignIn, setShowSignIn] = useState(() => hasPendingCode() && !loadWords(industry)?.made);
+  // The vertical in the address when a saved business sent us on to its own page.
+  const [movedFrom, setMovedFrom] = useState<IndustryKey | null>(null);
+  // The vertical being left through "Change what you sell", so that switch gets no "You're set up for" note.
+  const switchingFrom = useRef<IndustryKey | null>(null);
   const editRef = useRef<HTMLButtonElement>(null);
+
+  // Edit and change need a saved business. Without one (signed out, say) the maker shows.
+  const view = profile ? mode : "ads";
+  useEffect(() => {
+    if (!profile) setMode("ads");
+  }, [profile]);
+
+  useEffect(() => {
+    if (signedIn) setShowSignIn(false);
+  }, [signedIn]);
 
   // The button just pressed disappears on every screen change, so move focus to the new screen
   // (or back to "Edit business"), letting keyboard and screen-reader users carry on from there.
@@ -303,105 +343,150 @@ function SignedIn({
     target?.focus();
   }, [mode]);
 
-  // A saved business always wins over whatever vertical the address names.
-  const savedIndustry = profile?.industry;
+  // A saved business always wins over whatever vertical the address names. It never gets mixed into another vertical.
   useEffect(() => {
-    if (savedIndustry) goTo(savedIndustry);
-  }, [savedIndustry, goTo]);
-
-  const accountLine = (business?: { name: string; onEdit?: () => void }) => (
-    <div style={{ color: MUTED, fontSize: 14, display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 6, margin: "0 0 20px" }}>
-      <span style={{ overflowWrap: "anywhere" }}>
-        Signed in as <b style={{ color: INK }}>{viewer?.email ?? "…"}</b>
-      </span>
-      {business && (
-        <>
-          <span aria-hidden="true">·</span>
-          <span style={{ overflowWrap: "anywhere" }}>{business.name}</span>
-        </>
-      )}
-      {business?.onEdit && (
-        <>
-          <span aria-hidden="true">·</span>
-          <button ref={editRef} onClick={business.onEdit} disabled={savingOffer} style={{ ...linkButton, cursor: savingOffer ? "default" : "pointer" }}>
-            Edit business
-          </button>
-        </>
-      )}
-      <span aria-hidden="true">·</span>
-      <button onClick={() => void signOut()} style={linkButton}>Sign out</button>
-    </div>
-  );
-
-  if (profile === undefined) {
-    return (
-      <>
-        <h1 style={heading}><Brand industry={urlIndustry ?? undefined} showSuffix={urlIndustry !== null} /></h1>
-        <p>Loading…</p>
-      </>
-    );
-  }
-
-  if (profile === null) {
-    if (!urlIndustry) {
-      return (
-        <>
-          <h1 style={heading}><Brand showSuffix={false} /></h1>
-          {accountLine()}
-          <h2 id="setup-vertical" style={{ fontSize: 20, margin: "0 0 6px" }}>What do you sell?</h2>
-          <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 18px" }}>
-            {kind === "greeting"
-              ? "Pick one. Your Diwali greeting wording, photo tips and ad backgrounds will be made for it. You can change it later."
-              : "Pick one. Your backgrounds, photo tips and ad wording will be made for it. You can change it later."}
-          </p>
-          <SetupChooser kind={kind} onPick={goTo} />
-        </>
-      );
-    }
-    return (
-      <>
-        <h1 style={heading}><Brand industry={urlIndustry} /></h1>
-        {accountLine()}
-        <Onboarding industry={urlIndustry} initial={{ market: "IN", businessName: "" }} purpose={kind} onChangeVertical={() => goTo(null)} />
-      </>
-    );
-  }
-
-  const { industry, market, businessName, contact } = profile;
+    if (!profile || profile.industry === industry) return;
+    const onPurpose = switchingFrom.current === industry;
+    switchingFrom.current = null;
+    setMovedFrom(onPurpose ? null : industry);
+    goTo(profile.industry);
+  }, [profile, industry, goTo]);
 
   return (
     <>
-      <h1 style={heading}>{mode === "change" ? <Brand showSuffix={false} /> : <Brand industry={industry} />}</h1>
-      {mode === "ads" && <p style={{ lineHeight: 1.45, margin: "0 0 12px" }}>{tagline(industry, kind)}</p>}
-      {accountLine({ name: businessName, onEdit: mode === "ads" ? () => setMode("edit") : undefined })}
+      <h1 style={{ margin: "0 0 8px" }}>{view === "change" ? <Brand showSuffix={false} size={24} /> : <Brand industry={industry} size={24} />}</h1>
+
+      {signedIn === false && (
+        <>
+          <p style={{ fontSize: 15, lineHeight: 1.45, margin: "0 0 8px" }}>
+            {tagline(industry, kind)}
+            {hasExamples && (
+              <>
+                {" "}
+                {/* Inline, with padding that makes it 44px tall to tap without spreading the lines apart. */}
+                <a
+                  href="#examples"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    scrollToSection("examples");
+                  }}
+                  style={{ color: INK, padding: "13px 0", whiteSpace: "nowrap" }}
+                >
+                  See examples
+                </a>
+              </>
+            )}
+          </p>
+          <button
+            type="button"
+            aria-expanded={showSignIn}
+            onClick={() => setShowSignIn((open) => !open)}
+            style={{ ...linkButton, display: "block", fontSize: 15, textAlign: "left", margin: "0 0 8px" }}
+          >
+            Already have an account? Sign in
+          </button>
+          {showSignIn && (
+            <div style={{ border: "1px solid #e3e6eb", borderRadius: 12, padding: 14, margin: "0 0 16px" }}>
+              <SignIn heading="Sign in" intro="We'll email you a 6-digit code. Your saved greetings and ads come back." autoFocus />
+              <button type="button" onClick={() => setShowSignIn(false)} style={{ ...linkButton, fontSize: 15 }}>Cancel</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {signedIn === true && (
+        <AccountLine>
+          {profile ? (
+            <>
+              <b style={{ color: INK, overflowWrap: "anywhere" }}>{profile.businessName}</b>
+              {view === "ads" && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <button
+                    ref={editRef}
+                    type="button"
+                    onClick={() => setMode("edit")}
+                    disabled={saving}
+                    style={{ ...linkButton, cursor: saving ? "default" : "pointer" }}
+                  >
+                    Edit business
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <span style={{ overflowWrap: "anywhere" }}>{viewer?.email ?? "…"}</span>
+          )}
+        </AccountLine>
+      )}
+
+      {profile && movedFrom && movedFrom !== industry && (
+        <p role="status" style={{ ...festiveNote, display: "block", fontSize: 15, lineHeight: 1.45, margin: "0 0 16px" }}>
+          You're set up for {INDUSTRIES[profile.industry].chooserLabel}, so this is your {INDUSTRIES[profile.industry].chooserLabel} page. To make things
+          for {INDUSTRIES[movedFrom].chooserLabel}, use Edit business, then Change what you sell.
+        </p>
+      )}
 
       {/* Kept mounted (hidden) while choosing a vertical, so Cancel brings back any unsaved edits. */}
-      {mode !== "ads" && (
-        <div style={{ display: mode === "edit" ? undefined : "none" }}>
+      {profile && view !== "ads" && (
+        <div style={{ display: view === "edit" ? undefined : "none" }}>
+          <p style={{ color: MUTED, fontSize: 14, margin: "0 0 12px", overflowWrap: "anywhere" }}>
+            Signed in as <b style={{ color: INK }}>{viewer?.email ?? "…"}</b>
+          </p>
           <Onboarding
-            industry={industry}
-            initial={{ market, businessName, contact }}
+            industry={profile.industry}
+            initial={{ market: profile.market, businessName: profile.businessName, contact: profile.contact }}
             onCancel={() => setMode("ads")}
             onSaved={() => setMode("ads")}
             onChangeVertical={(typed) => {
               setDraft(typed);
+              switchingFrom.current = profile.industry;
               setMode("change");
             }}
           />
         </div>
       )}
-      {mode === "change" && (
+      {profile && view === "change" && (
         <ChangeVertical
-          current={industry}
-          details={draft ?? { market, businessName, contact }}
-          onCancel={() => setMode("edit")}
+          current={profile.industry}
+          details={draft ?? { market: profile.market, businessName: profile.businessName, contact: profile.contact }}
+          onCancel={() => {
+            switchingFrom.current = null;
+            setMode("edit");
+          }}
           onDone={() => setMode("ads")}
         />
       )}
-      {/* Keyed by vertical so an unfinished ad never carries over into another vertical. */}
-      <div style={{ display: mode === "ads" ? undefined : "none" }}>
-        <NewAd key={industry} industry={industry} profile={{ businessName, contact }} initialKind={kind} onKindChange={onKind} onBusyChange={setSavingOffer} />
+      {/* Keyed by vertical so an unfinished ad never carries over into another vertical. Hidden, never unmounted,
+          during Edit business, and never remounted on sign-in or while the profile loads. */}
+      <div style={{ display: view === "ads" ? undefined : "none" }}>
+        <NewAd
+          key={industry}
+          industry={industry}
+          signedIn={signedIn}
+          profile={signedIn === false ? null : profile}
+          initialKind={kind}
+          onKindChange={onKind}
+          onBusyChange={setSaving}
+        />
       </div>
+
+      {signedIn === false && (
+        <>
+          {hasExamples && (
+            <section id="examples" tabIndex={-1} aria-labelledby="examples-title" style={{ marginTop: 32, scrollMarginTop: 16, outline: "none" }}>
+              <h2 id="examples-title" style={sectionTitle}>Examples</h2>
+              <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 12px" }}>Made with sample photos. Yours uses your own photo, or no photo for a greeting.</p>
+              <ShowcaseRow items={examples} label={`Examples for ${config.chooserLabel}`} height={120} />
+            </section>
+          )}
+          <p style={{ marginTop: 32, fontSize: 14 }}>
+            <a href={"/" + makeSearch(kind)} style={{ color: MUTED, display: "inline-flex", alignItems: "center", minHeight: 44 }}>
+              Sell something else? Choose another
+            </a>
+          </p>
+        </>
+      )}
     </>
   );
 }

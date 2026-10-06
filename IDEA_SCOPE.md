@@ -472,6 +472,7 @@ Any change to these requires a written scope decision in section 15.
 | Direct posting to Meta | Saves a step | Integration risk | Sat 17 Oct |
 | Video / reels | Higher engagement | Too heavy for the sprint | Sat 17 Oct |
 | Per-ad custom AI background (dealer types a scene) | More variety | Slow (20–60 s) and paid per ad; presets cover v1 | Sat 17 Oct |
+| Visual website + onboarding sequence (references researched Tue 6 Oct, in JOB_FLOW.md research) | Better first impression on the home page | Feature freeze until Fri 9 Oct; builder chose "onboarding live first, website after the calls" (Tue 6 Oct) | After the Wed 7 Oct calls |
 
 ## 14. current state
 

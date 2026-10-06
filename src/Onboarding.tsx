@@ -21,7 +21,23 @@ const input = { display: "block", width: "100%", padding: 12, fontSize: 16, marg
 const hint = { color: MUTED, fontSize: 13, margin: "0 0 18px" };
 const fieldset = { border: "none", padding: 0, margin: "0 0 22px", minWidth: 0 };
 const legend = { fontWeight: 600, padding: 0, marginBottom: 8 };
-const button = { padding: "12px 20px", fontSize: 16, minHeight: 44, cursor: "pointer" };
+// The one main action on a screen: amber and full width. Dimmed while it can't be pressed.
+function primary(disabled: boolean) {
+  return {
+    display: "block",
+    width: "100%",
+    minHeight: 52,
+    padding: "12px 20px",
+    fontSize: 17,
+    fontWeight: 700,
+    background: AMBER,
+    color: INK,
+    border: "none",
+    borderRadius: 10,
+    cursor: disabled ? "default" : "pointer",
+    opacity: disabled ? 0.55 : 1,
+  };
+}
 const radio = { width: 20, height: 20, margin: "1px 0 0", flexShrink: 0, accentColor: INK };
 const linkButton = {
   background: "none",
@@ -178,7 +194,7 @@ export default function Onboarding({
   const editing = Boolean(onCancel);
   const greeting = purpose === "greeting" && !editing;
   const config = INDUSTRIES[industry];
-  const shownOn = greeting ? "your greeting and ads" : "your ads";
+  const shownOn = greeting ? "your greeting and ads" : "your greetings and ads";
   const changeVertical = () =>
     onChangeVertical?.({ market, businessName: businessName.trim() ? businessName : initial.businessName, contact: contact.trim() || undefined });
 
@@ -255,7 +271,7 @@ export default function Onboarding({
       <p style={hint}>Shown on {shownOn}.</p>
 
       <label htmlFor="contact" style={{ fontWeight: 600 }}>
-        Phone, website or Instagram (shown on {shownOn}) <span style={{ color: MUTED, fontWeight: 400 }}>· optional</span>
+        Phone, website or Instagram <span style={{ color: MUTED, fontWeight: 400 }}>· optional</span>
       </label>
       <input
         id="contact"
@@ -263,19 +279,18 @@ export default function Onboarding({
         onChange={(e) => setContact(e.target.value)}
         maxLength={60}
         placeholder={config.contactPlaceholder}
-        style={{ ...input, marginBottom: 22 }}
+        style={input}
       />
+      <p style={{ ...hint, marginBottom: 22 }}>Shown on {shownOn}.</p>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-        <button type="submit" disabled={busy} style={button}>
-          {busy ? "Saving…" : editing ? "Save changes" : greeting ? "Continue to your greeting" : "Continue"}
+      <button type="submit" disabled={busy} style={primary(busy)}>
+        {busy ? "Saving…" : editing ? "Save changes" : greeting ? "Continue to your greeting" : "Continue"}
+      </button>
+      {onCancel && (
+        <button type="button" onClick={onCancel} disabled={busy} style={{ ...linkButton, display: "block", fontSize: 15, marginTop: 6 }}>
+          Cancel
         </button>
-        {onCancel && (
-          <button type="button" onClick={onCancel} disabled={busy} style={{ ...button, background: "none", border: "none", textDecoration: "underline" }}>
-            Cancel
-          </button>
-        )}
-      </div>
+      )}
       {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
     </form>
   );
@@ -320,14 +335,12 @@ export function ChangeVertical({
         again if you switch back.
       </p>
       <VerticalCards labelledBy="change-vertical" onPick={setNext} selected={next} current={current} disabled={busy} />
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 22 }}>
-        <button type="button" onClick={() => void confirm()} disabled={busy || next === current} style={button}>
-          {busy ? "Saving…" : next === current ? "Pick a new category" : `Switch to ${INDUSTRIES[next].chooserLabel}`}
-        </button>
-        <button type="button" onClick={onCancel} disabled={busy} style={{ ...button, background: "none", border: "none", textDecoration: "underline" }}>
-          Cancel
-        </button>
-      </div>
+      <button type="button" onClick={() => void confirm()} disabled={busy || next === current} style={{ ...primary(busy || next === current), marginTop: 22 }}>
+        {busy ? "Saving…" : next === current ? "Pick a new category" : `Switch to ${INDUSTRIES[next].chooserLabel}`}
+      </button>
+      <button type="button" onClick={onCancel} disabled={busy} style={{ ...linkButton, display: "block", fontSize: 15, marginTop: 6 }}>
+        Cancel
+      </button>
       {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
     </section>
   );

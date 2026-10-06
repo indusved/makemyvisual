@@ -69,7 +69,7 @@ export const INDUSTRIES = {
     path: "fashion",
     enabled: true,
     businessNoun: "brand",
-    productNoun: "item",
+    productNoun: "outfit",
     tagline: "Upload a photo of your outfit, type your offer, get ads in every social size in 2 minutes.",
     businessNamePlaceholder: "Kavya Ethnic",
     contactPlaceholder: "kavyaethnic.in or @kavyaethnic",

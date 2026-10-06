@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { ConvexError } from "convex/values";
 import { api } from "../convex/_generated/api";
 import { INDUSTRIES, SEASON, type FieldCopy, type IndustryKey } from "../convex/industries";
 import type { Id } from "../convex/_generated/dataModel";
-import AdResults from "./AdResults";
-import PhotoGuide from "./PhotoGuide";
-import { checkPhoto, type PhotoWarning } from "./photoCheck";
+import AdResults, { type Made, type SaveState } from "./AdResults";
+import { loadImage, type Offer } from "./adRenderer";
+import { cutoutFromUrl, preloadCutout, startCutout, useCutoutState, type CutoutRun } from "./cutout";
+import { clearDraft, loadPhoto, loadWords, savePhoto, saveWords } from "./draft";
+import PhotoGuide, { PhotoTip } from "./PhotoGuide";
+import { checkPhoto, shrinkPhoto, type PhotoWarning } from "./photoCheck";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/webp";
@@ -17,31 +19,41 @@ const MAROON = "#6B1020";
 const GOLD = "#E9B44C";
 const OWN = "own";
 const HEADLINE_MAX = 60;
+const NAME_MAX = 60;
 
 type Kind = "offer" | "greeting";
+type Profile = { industry: IndustryKey; market: "IN" | "US"; businessName: string; contact?: string };
+// What the results screen shows. id changes on every Make, Update and Open (one saved job per id).
+// photoKey changes only with the photo: AdResults is keyed by it, so Update keeps the chosen background.
+type MadeItem = Made & { id: number; photoKey: number; file: File | null; savedJobId?: Id<"jobs">; savedHasCutout?: boolean };
+type Photo = { file: File | null; url: string | null; run: CutoutRun | null; key: number };
 
-const input = { display: "block", width: "100%", padding: 12, fontSize: 16, margin: "6px 0 14px", boxSizing: "border-box" as const };
-const hint = { color: "#666", fontSize: 13, marginTop: -10, marginBottom: 14 };
-const pickButton = {
+const input: CSSProperties = { display: "block", width: "100%", padding: 12, fontSize: 16, margin: "6px 0 14px", boxSizing: "border-box", fontFamily: "inherit" };
+const hint: CSSProperties = { color: "#666", fontSize: 13, marginTop: -10, marginBottom: 14 };
+const pickButton: CSSProperties = {
   flex: "1 1 200px", minHeight: 48, padding: "12px 16px", fontSize: 16, fontWeight: 600, borderRadius: 10, border: `2px solid ${INK}`,
-  cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+  cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit",
 };
 const offscreen = { position: "absolute" as const, width: 1, height: 1, opacity: 0, pointerEvents: "none" as const };
 const groupLabel: CSSProperties = { display: "block", fontWeight: 600, margin: "0 0 8px" };
 const linkButton: CSSProperties = { background: "none", border: "none", padding: 0, minHeight: 44, font: "inherit", fontSize: 15, color: INK, textDecoration: "underline", cursor: "pointer" };
+const note: CSSProperties = { background: "#FFF6D6", border: `1px solid ${AMBER}`, borderRadius: 10, padding: "12px 14px", margin: "6px 0 10px", fontSize: 15, lineHeight: 1.4, color: INK };
 // Focus ring for chips whose real radio button is hidden.
 const CHIP_CSS = ".mmv-chip input:focus-visible+span{outline:3px solid #111317;outline-offset:2px}";
 
 // Devanagari text gets lang="hi" so screen readers read it in Hindi.
 const langOf = (text: string) => (/[ऀ-ॿ]/.test(text) ? "hi" : undefined);
 
+// Market only matters for the saved profile (it changes nothing on the visuals); editable in Edit business.
+function defaultMarket(): "IN" | "US" {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone?.startsWith("America/") ? "US" : "IN";
+  } catch {
+    return "IN";
+  }
+}
+
 type FieldKey = "headline" | "details" | "validity" | "finePrint";
-const FIELDS: { key: FieldKey; maxLength: number; required?: boolean; multiline?: boolean }[] = [
-  { key: "headline", maxLength: HEADLINE_MAX, required: true },
-  { key: "details", maxLength: 80 },
-  { key: "validity", maxLength: 40 },
-  { key: "finePrint", maxLength: 200, multiline: true },
-];
 
 // A clay lamp in a 40×40 box.
 function DiyaShape() {
@@ -59,39 +71,6 @@ function DiyaShape() {
   );
 }
 
-function GreetingArt() {
-  // The garland runs past the drawing's edges so it reaches the sides of wider cards.
-  const flowers = Array.from({ length: 21 }, (_, i) => {
-    const x = -64 + i * 14.4;
-    const y = 8 + 10 * Math.sin((Math.PI * i) / 20);
-    return <circle key={i} cx={x} cy={y} r="4.2" fill={i % 2 ? GOLD : "#F08A24"} />;
-  });
-  return (
-    <svg aria-hidden="true" viewBox="0 0 160 72" style={{ display: "block", width: "100%", height: 72, background: `linear-gradient(135deg, ${MAROON}, #3A0710)` }}>
-      <path d="M-64 8 Q80 28 224 8" fill="none" stroke="#7A4A12" strokeWidth="1" />
-      {flowers}
-      <g transform="translate(26 38) scale(0.75)"><DiyaShape /></g>
-      <g transform="translate(62 28)"><DiyaShape /></g>
-      <g transform="translate(106 38) scale(0.75)"><DiyaShape /></g>
-    </svg>
-  );
-}
-
-function OfferArt() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 160 72" style={{ display: "block", width: "100%", height: 72, background: INK }}>
-      <rect x="22" y="14" width="30" height="44" rx="4" fill="none" stroke="#3b3f47" strokeWidth="2" />
-      <rect x="110" y="20" width="32" height="32" rx="4" fill="none" stroke="#3b3f47" strokeWidth="2" />
-      <g transform="rotate(-14 80 36)">
-        <path d="M58 22h30l14 14-14 14H58z" fill={AMBER} />
-        <circle cx="91" cy="36" r="3" fill={INK} />
-        <text x="73" y="42" textAnchor="middle" fontSize="17" fontWeight="800" fill={INK} fontFamily="system-ui, sans-serif">%</text>
-      </g>
-      <path d="M118 10v6M115 13h6M40 62v5M37.5 64.5h5" stroke={AMBER} strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 // Thumbnail for a saved greeting that has no photo.
 function GreetingTile() {
   return (
@@ -101,19 +80,30 @@ function GreetingTile() {
   );
 }
 
-function kindCard(selected: boolean): CSSProperties {
+// Whole seconds since `from`, ticking every second. Hidden from screen readers, so the status
+// line around it isn't read out again on every tick.
+function Seconds({ from }: { from: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <span aria-hidden="true"> · {Math.max(0, Math.floor((now - from) / 1000))} s</span>;
+}
+
+function kindButton(selected: boolean): CSSProperties {
   return {
-    position: "relative",
-    display: "flex",
-    flexDirection: "column",
-    minWidth: 0,
-    borderRadius: 12,
-    overflow: "hidden",
-    background: "#fff",
+    minHeight: 48,
+    padding: "8px 10px",
+    borderRadius: 10,
+    fontSize: 16,
+    fontFamily: "inherit",
+    lineHeight: 1.25,
     color: INK,
     cursor: "pointer",
-    border: `2px solid ${selected ? AMBER : "#d5d8de"}`,
-    boxShadow: selected ? `0 0 0 1px ${AMBER}` : "none",
+    border: selected ? `2px solid ${INK}` : "1px solid #d5d8de",
+    background: selected ? "#FFF6D6" : "#fff",
+    fontWeight: selected ? 700 : 400,
   };
 }
 
@@ -135,26 +125,6 @@ function chip(selected: boolean): CSSProperties {
   };
 }
 
-function suggestion(selected: boolean): CSSProperties {
-  return {
-    display: "block",
-    width: "100%",
-    minHeight: 44,
-    boxSizing: "border-box",
-    margin: "0 0 8px",
-    padding: selected ? "9px 11px" : "10px 12px",
-    borderRadius: 10,
-    border: selected ? `2px solid ${MAROON}` : "1px solid #d5d8de",
-    background: selected ? "#FBF1EE" : "#fff",
-    color: INK,
-    font: "inherit",
-    fontSize: 15,
-    lineHeight: 1.4,
-    textAlign: "left",
-    cursor: "pointer",
-  };
-}
-
 function kindTag(kind: Kind): CSSProperties {
   return {
     display: "inline-block",
@@ -171,174 +141,700 @@ function kindTag(kind: Kind): CSSProperties {
 
 export default function NewAd({
   industry,
+  signedIn,
   profile,
   initialKind,
   onKindChange,
   onBusyChange,
 }: {
   industry: IndustryKey;
-  profile: { businessName: string; contact?: string };
+  // undefined while the sign-in state loads.
+  signedIn: boolean | undefined;
+  // undefined = loading; null = guest, or signed in with no business saved yet.
+  profile: Profile | null | undefined;
   initialKind?: Kind;
   // Told when the greeting/offer choice changes, so it survives a category switch or reload.
   onKindChange?: (kind: Kind) => void;
-  // Told while an offer or greeting is saving: the server files it under whatever vertical the profile has then.
+  // True only while a save runs: the server files it under whatever vertical the profile has then.
   onBusyChange?: (busy: boolean) => void;
 }) {
   const copy = INDUSTRIES[industry];
   const fields: Record<FieldKey, FieldCopy> = copy.fields;
   const noun = copy.productNoun;
-  const generateUploadUrl = useMutation(api.jobs.generateUploadUrl);
-  const createJob = useMutation(api.jobs.create);
-  const jobs = useQuery(api.jobs.mine, { industry });
+  // Read once: the words come back straight away, the photo a moment later (see the mount effect).
+  const [draft] = useState(() => loadWords(industry));
 
-  const [kind, setKind] = useState<Kind>(initialKind ?? "offer");
-  const [line, setLine] = useState<string>(SEASON.greetingOptions[0]);
-  const [ownLine, setOwnLine] = useState("");
-  const [message, setMessage] = useState<string>(copy.greeting.message);
+  // The address decides greeting or offer: the switch keeps it in step, so a reload keeps the choice.
+  const [kind, setKind] = useState<Kind>(initialKind ?? draft?.kind ?? "offer");
+  const [line, setLine] = useState<string>(draft?.line || SEASON.greetingOptions[0]);
+  const [ownLine, setOwnLine] = useState(draft?.ownLine ?? "");
+  const [message, setMessage] = useState<string>(draft ? draft.message : copy.greeting.message);
+  const [headline, setHeadline] = useState(draft?.headline ?? "");
+  const [details, setDetails] = useState(draft?.details ?? "");
+  const [validity, setValidity] = useState(draft?.validity ?? "");
+  const [finePrint, setFinePrint] = useState(draft?.finePrint ?? "");
+  const [businessName, setBusinessName] = useState(draft?.businessName ?? "");
+  const [contact, setContact] = useState(draft?.contact ?? "");
+  const [editingBusiness, setEditingBusiness] = useState(false);
+  const [showExtras, setShowExtras] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<PhotoWarning[]>([]);
+  const [view, setView] = useState<"form" | "results">("form");
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [guideSignal, setGuideSignal] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [warnings, setWarnings] = useState<PhotoWarning[]>([]);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState<Kind | null>(null);
-  const [activeJobId, setActiveJobId] = useState<Id<"jobs"> | null>(null);
-  const activeJob = jobs?.find((j) => j._id === activeJobId);
+  const [photoKey, setPhotoKey] = useState(0);
+  const [run, setRun] = useState<CutoutRun | null>(null);
+  // A picked photo is being made smaller before it shows.
+  const [shrinking, setShrinking] = useState(false);
+  const [made, setMade] = useState<MadeItem | null>(null);
+  // The draft photo has been looked for. Until then the stored draft is left alone.
+  const [loaded, setLoaded] = useState(false);
+  // The draft was on the results screen: make it again once the account state is known.
+  const [restoreMake, setRestoreMake] = useState(false);
+  // A guest just signed in with results on screen: save once the profile has loaded.
+  const [pendingSave, setPendingSave] = useState(false);
+
+  const greeting = kind === "greeting";
+  const jobs = useQuery(api.jobs.mine, signedIn ? { industry } : "skip");
+  // Only used to warm the first backdrop; AdResults reads the same (shared) query.
+  const backgrounds = useQuery(api.backgrounds.list, greeting ? { industry, kind: "greeting" as const } : { industry });
+  const ensureProfile = useMutation(api.profiles.ensure);
+  const generateUploadUrl = useMutation(api.jobs.generateUploadUrl);
+  const createJob = useMutation(api.jobs.create);
+  const markDone = useMutation(api.jobs.markDone);
+  const logDownload = useMutation(api.jobs.logDownload);
+  const setCutout = useMutation(api.jobs.setCutout);
+  const cut = useCutoutState(run);
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const takeRef = useRef<HTMLButtonElement>(null);
+  const retakeRef = useRef<HTMLButtonElement>(null);
+  const photoRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const contactRef = useRef<HTMLInputElement>(null);
+  const ownRef = useRef<HTMLInputElement>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+  const headlineRef = useRef<HTMLInputElement>(null);
+  const validityRef = useRef<HTMLInputElement>(null);
   const checkRun = useRef(0);
-  const resultsRef = useRef<HTMLDivElement>(null);
-  const greeting = kind === "greeting";
+  const madeCounter = useRef(0);
+  const photoKeyCounter = useRef(0);
+  const currentMadeId = useRef<number | null>(null);
+  const prevSigned = useRef(signedIn);
+  // Object URLs this component made, revoked once neither the form nor the results use them.
+  const urls = useRef(new Set<string>());
+  // One save per made id, one upload per photo; a failed entry is dropped so the next call retries.
+  const saves = useRef(new Map<number, Promise<Id<"jobs"> | null>>());
+  const uploads = useRef(new Map<number, Promise<Id<"_storage">>>());
+  // Shares and downloads (per made id) that happened while its save failed; counted once it saves.
+  const missed = useRef(new Map<number, number>());
+  // Greetings: the results on screen leave the photo out.
+  const photoLeftOut = useRef(false);
+  const busyCount = useRef(0);
+  const busyChange = useRef(onBusyChange);
+  const warmed = useRef(new Set<string>());
 
-  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  // Account state: guest, or signed in with the profile loaded (null = no business yet).
+  const accountKnown = signedIn === false || (signedIn === true && profile !== undefined);
+  const showBusinessInputs = accountKnown && (signedIn === false || profile === null || editingBusiness);
+  // The typed name while the inputs show (or no profile is loaded yet), otherwise the saved one, live.
+  const nameForVisual = showBusinessInputs || !profile ? businessName.trim() : profile.businessName;
+  const contactForVisual = showBusinessInputs || !profile ? contact.trim() : profile.contact ?? "";
+  const draftMade = made !== null && made.savedJobId === undefined;
+  const madeUrl = made?.photoUrl ?? null;
+
   useEffect(() => {
-    onBusyChange?.(busy);
-    return () => onBusyChange?.(false);
-  }, [busy, onBusyChange]);
+    busyChange.current = onBusyChange;
+  }, [onBusyChange]);
+  useEffect(() => () => {
+    if (busyCount.current > 0) busyChange.current?.(false);
+  }, []);
+
+  useEffect(() => {
+    currentMadeId.current = made?.id ?? null;
+  }, [made]);
+
+  useEffect(() => {
+    for (const url of urls.current) {
+      if (url !== preview && url !== madeUrl) {
+        URL.revokeObjectURL(url);
+        urls.current.delete(url);
+      }
+    }
+  }, [preview, madeUrl]);
+  useEffect(() => {
+    const created = urls.current;
+    return () => {
+      for (const url of created) URL.revokeObjectURL(url);
+      created.clear();
+    };
+  }, []);
+
+  // Once on mount: bring back the draft photo, and the results if the draft was on them.
+  useEffect(() => {
+    let cancelled = false;
+    if (!draft) {
+      // No draft in this tab: drop any photo left over from an earlier visit.
+      void savePhoto(industry, null);
+      setLoaded(true);
+      return;
+    }
+    // A draft of the other kind is left from an earlier visit: its words come back, its results don't.
+    const sameKind = draft.kind === (initialKind ?? draft.kind);
+    void loadPhoto(industry).then((blob) => {
+      if (cancelled) return;
+      // A photo picked in the meantime wins.
+      const restored = blob && checkRun.current === 0 ? showPhoto(new File([blob], "photo.jpg", { type: blob.type || "image/jpeg" })) : null;
+      if (draft.made && sameKind) {
+        if (draft.kind === "greeting" || restored) setRestoreMake(true);
+        else setPhotoError("Please add your photo again.");
+      }
+      setLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!restoreMake || !accountKnown) return;
+    setRestoreMake(false);
+    // The words may have changed after Make (say, an emptied name): they pass the same checks first.
+    const found = problem();
+    if (found) return stop(found);
+    commitMake({ file, url: preview, run, key: photoKey });
+  }, [restoreMake, accountKnown]);
+
+  useEffect(() => {
+    if (!loaded || restoreMake) return;
+    saveWords(industry, { kind, line, ownLine, message, headline, details, validity, finePrint, businessName, contact, made: draftMade });
+  }, [loaded, restoreMake, industry, kind, line, ownLine, message, headline, details, validity, finePrint, businessName, contact, draftMade]);
+
+  // Guest → signed in (not the first load) with results on screen: save them once.
+  useEffect(() => {
+    const was = prevSigned.current;
+    prevSigned.current = signedIn;
+    if (was === false && signedIn === true && made && view === "results") setPendingSave(true);
+  }, [signedIn, made, view]);
+  useEffect(() => {
+    if (!pendingSave) return;
+    if (!made) {
+      setPendingSave(false);
+      return;
+    }
+    if (profile === undefined) return;
+    setPendingSave(false);
+    void ensureSaved(made);
+  }, [pendingSave, profile, made]);
+
+  // Warm the first backdrop, so the first picture after Make doesn't wait on its download.
+  const warmUrl = backgrounds?.find((b) => b.url)?.url ?? null;
+  const wantWarm = greeting || file !== null;
+  useEffect(() => {
+    if (!wantWarm || !warmUrl || warmed.current.has(warmUrl)) return;
+    warmed.current.add(warmUrl);
+    void loadImage(warmUrl).catch(() => {});
+  }, [wantWarm, warmUrl]);
+
+  // A rejected cut-out: open the photo guide next to the advice.
+  const cutStage = cut?.stage;
+  useEffect(() => {
+    if (cutStage === "bad") setGuideSignal((n) => n + 1);
+  }, [cutStage]);
 
   function chooseKind(next: Kind) {
     setKind(next);
     setError(null);
-    setSaved(null);
     onKindChange?.(next);
+  }
+
+  function onKindKey(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    const next: Kind = greeting ? "offer" : "greeting";
+    chooseKind(next);
+    event.currentTarget.parentElement?.querySelector<HTMLButtonElement>(`[data-kind="${next}"]`)?.focus();
+  }
+
+  function openBusinessEditor(field: "name" | "contact") {
+    if (profile) {
+      setBusinessName(profile.businessName);
+      setContact(profile.contact ?? "");
+    }
+    setEditingBusiness(true);
+    requestAnimationFrame(() => (field === "name" ? nameRef : contactRef).current?.focus());
+  }
+
+  function nextMessage() {
+    const ideas: readonly string[] = copy.greeting.suggestions;
+    const at = ideas.indexOf(message);
+    for (let step = 1; step <= ideas.length; step++) {
+      const idea = ideas[(at + step) % ideas.length];
+      if (idea !== message) return setMessage(idea);
+    }
+  }
+
+  function openPhoto() {
+    preloadCutout();
+    setPhotoOpen(true);
+    requestAnimationFrame(() => takeRef.current?.focus());
+  }
+
+  function choosePhoto(picker: HTMLInputElement | null) {
+    // Start the cut-out model download while the camera or gallery is open.
+    preloadCutout();
+    picker?.click();
+  }
+
+  // Shows a (shrunk) photo, starts its cut-out and checks it.
+  function showPhoto(f: File): Photo {
+    const url = URL.createObjectURL(f);
+    urls.current.add(url);
+    const key = ++photoKeyCounter.current;
+    const cutRun = startCutout(f);
+    setFile(f);
+    setPreview(url);
+    setPhotoKey(key);
+    setRun(cutRun);
+    setWarnings([]);
+    setPhotoOpen(true);
+    const check = ++checkRun.current;
+    void checkPhoto(f, noun).then((found) => {
+      if (check !== checkRun.current) return;
+      setWarnings(found);
+      if (found.length > 0) setGuideSignal((n) => n + 1);
+    });
+    return { file: f, url, run: cutRun, key };
   }
 
   function clearPhoto() {
     checkRun.current++;
+    setShrinking(false);
     setFile(null);
     setPreview(null);
+    setRun(null);
     setWarnings([]);
     setPhotoError(null);
+    setPhotoOpen(false);
+    setPhotoKey(++photoKeyCounter.current);
+    void savePhoto(industry, null);
   }
 
-  function pickFile(f: File | undefined) {
+  async function pickFile(f: File | undefined) {
     setPhotoError(null);
     setError(null);
-    setSaved(null);
     if (!f) return;
     if (!ACCEPT.split(",").includes(f.type)) return setPhotoError("Please choose a JPG, PNG or WebP photo.");
     if (f.size > MAX_BYTES) return setPhotoError("That photo is over 10 MB. Please choose a smaller one.");
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-    setWarnings([]);
-    const run = ++checkRun.current;
-    void checkPhoto(f, noun).then((found) => {
-      if (run === checkRun.current) setWarnings(found);
-    });
+    const pick = ++checkRun.current;
+    setShrinking(true);
+    const small = await shrinkPhoto(f);
+    // A newer pick, or Remove photo, happened while this one was shrinking.
+    if (pick !== checkRun.current) return;
+    setShrinking(false);
+    showPhoto(small);
+    void savePhoto(industry, small);
   }
 
   function onPicked(event: React.ChangeEvent<HTMLInputElement>) {
     const f = event.target.files?.[0];
     event.target.value = "";
-    pickFile(f);
+    void pickFile(f);
   }
 
-  async function upload(f: File): Promise<Id<"_storage">> {
-    const uploadUrl = await generateUploadUrl();
-    const res = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": f.type }, body: f });
-    if (!res.ok) throw new Error("upload failed");
-    return (await res.json()).storageId;
+  // Draws nothing and saves nothing: AdResults draws from the local photo, saving waits for Share/Download.
+  function commitMake(photo: Photo) {
+    const words: Offer = {
+      headline: (greeting ? (line === OWN ? ownLine : line) : headline).trim(),
+      message: greeting ? message.trim() : undefined,
+      details: greeting ? undefined : details.trim() || undefined,
+      validity: greeting ? undefined : validity.trim() || undefined,
+      finePrint: greeting ? undefined : finePrint.trim() || undefined,
+      businessName: nameForVisual,
+      contact: contactForVisual || undefined,
+    };
+    let cutRun = photo.file ? photo.run : null;
+    if (photo.file && !cutRun) {
+      cutRun = startCutout(photo.file);
+      setRun(cutRun);
+    }
+    setMade({ id: ++madeCounter.current, kind, words, photoUrl: photo.file ? photo.url : null, cutout: cutRun, photoKey: photo.key, file: photo.file });
+    setSaveState("idle");
+    setError(null);
+    setView("results");
+    requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ block: "start" }));
   }
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  // The first thing stopping Make, with the field to fix; null when it can go ahead.
+  function problem(): { text: string; field: HTMLElement | null } | null {
+    if (showBusinessInputs && !businessName.trim()) {
+      return { text: `Type your ${copy.businessNoun}'s name. It goes on your ${greeting ? "greeting" : "ads"}.`, field: nameRef.current };
+    }
+    if (greeting && !(line === OWN ? ownLine : line).trim()) return { text: "Please type your greeting, or pick one above.", field: ownRef.current };
+    if (!greeting && !file) {
+      return { text: shrinking ? "Your photo is still getting ready. Tap again in a moment." : `Add a photo of your ${noun} first.`, field: takeRef.current };
+    }
+    if (!greeting && !headline.trim()) return { text: "Type your offer headline.", field: headlineRef.current };
+    return null;
+  }
+
+  function stop({ text, field }: { text: string; field: HTMLElement | null }) {
+    setError(text);
+    field?.scrollIntoView({ block: "center" });
+    field?.focus({ preventScroll: true });
+  }
+
+  function make(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (greeting) return void submitGreeting();
-    if (!file) return setError(`Please add a photo of your ${noun} first.`);
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    setBusy(true);
-    setError(null);
-    try {
-      const storageId = await upload(file);
-      const jobId = await createJob({
-        industry,
-        kind: "offer",
-        photoStorageId: storageId,
-        headline: String(data.get("headline") ?? ""),
-        details: String(data.get("details") ?? ""),
-        validity: String(data.get("validity") ?? ""),
-        finePrint: String(data.get("finePrint") ?? ""),
-      });
-      form.reset();
-      clearPhoto();
-      setSaved("offer");
-      setActiveJobId(jobId);
-    } catch (e) {
-      setError(e instanceof ConvexError ? String(e.data) : "Something went wrong saving your offer. Please try again.");
-    } finally {
-      setBusy(false);
-    }
+    if (!accountKnown) return;
+    const found = problem();
+    if (found) return stop(found);
+    commitMake({ file, url: preview, run, key: photoKey });
   }
 
-  async function submitGreeting() {
-    const headline = (line === OWN ? ownLine : line).trim();
-    if (!headline) return setError("Please type your greeting, or pick one above.");
-    setBusy(true);
-    setError(null);
-    try {
-      const photoStorageId = file ? await upload(file) : undefined;
-      const jobId = await createJob({ industry, kind: "greeting", headline, message: message.trim(), photoStorageId });
-      clearPhoto();
-      setSaved("greeting");
-      setActiveJobId(jobId);
-    } catch (e) {
-      setError(e instanceof ConvexError ? String(e.data) : "Something went wrong saving your greeting. Please try again.");
-    } finally {
-      setBusy(false);
-    }
+  // to "photo": from a rejected cut-out on the results. The photo guide is already open by the photo.
+  function changeWords(to?: "photo") {
+    setView("form");
+    requestAnimationFrame(() => {
+      if (to === "photo" && photoRef.current) {
+        photoRef.current.scrollIntoView({ block: "start" });
+        retakeRef.current?.focus({ preventScroll: true });
+        return;
+      }
+      rootRef.current?.scrollIntoView({ block: "start" });
+      (greeting ? messageRef : headlineRef).current?.focus({ preventScroll: true });
+    });
   }
 
-  const kinds: { key: Kind; title: string; meta: string; line: string; art: React.ReactNode; metaColor: string }[] = [
-    { key: "greeting", title: SEASON.label, meta: SEASON.dateLabel, line: "Send to customers on WhatsApp, email or print", art: <GreetingArt />, metaColor: MAROON },
-    { key: "offer", title: "Offer ad", meta: "For social posts and ads", line: `Show a price or deal on your ${noun}s`, art: <OfferArt />, metaColor: MUTED },
-  ];
-  const hasOffers = jobs?.some((j) => j.kind === "offer") ?? true;
-  const near = message.length >= SEASON.messageMax - 10;
+  function makeAnother() {
+    setLine(SEASON.greetingOptions[0]);
+    setOwnLine("");
+    setMessage(copy.greeting.message);
+    setHeadline("");
+    setDetails("");
+    setValidity("");
+    setFinePrint("");
+    setShowExtras(false);
+    clearPhoto();
+    setMade(null);
+    setView("form");
+    setSaveState("idle");
+    setError(null);
+    setPendingSave(false);
+    clearDraft(industry);
+    requestAnimationFrame(() => rootRef.current?.scrollIntoView({ block: "start" }));
+  }
 
-  const photoSection = (
-    <>
-      <div role="group" aria-labelledby="photo-label" aria-describedby={greeting ? "photo-optional" : undefined} style={{ position: "relative" }}>
-        {greeting ? (
-          <>
-            <p id="photo-label" style={{ margin: 0, fontWeight: 600 }}>Add a photo of your {noun} — optional</p>
-            <p id="photo-optional" style={{ margin: "4px 0 0", color: MUTED, fontSize: 14, lineHeight: 1.4 }}>
-              Your real {noun} sits on the festive background. Skip it for a greeting with just your words.
-            </p>
-          </>
+  function retryCutout() {
+    if (!made?.photoUrl) return;
+    const cutRun = startCutout(made.file ?? made.photoUrl);
+    // Only when the results show the form's own photo (not a reopened saved item).
+    if (made.photoKey === photoKey) setRun(cutRun);
+    setMade({ ...made, cutout: cutRun });
+    // Already saved, or saving: that save has the failed run, so this one is filed with the job instead.
+    const saving = saves.current.get(made.id);
+    if (saving && !made.savedHasCutout && !(made.kind === "greeting" && photoLeftOut.current)) saveCutoutWhenReady(saving, cutRun);
+  }
+
+  function upload(body: Blob, type: string): Promise<Id<"_storage">> {
+    return (async () => {
+      const uploadUrl = await generateUploadUrl();
+      const res = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": type }, body });
+      if (!res.ok) throw new Error("upload failed");
+      return (await res.json()).storageId as Id<"_storage">;
+    })();
+  }
+
+  // Update keeps the same photo, so it reuses one upload.
+  function uploadOnce(key: number, f: File): Promise<Id<"_storage">> {
+    let pending = uploads.current.get(key);
+    if (!pending) {
+      pending = upload(f, f.type);
+      uploads.current.set(key, pending);
+      pending.catch(() => uploads.current.delete(key));
+    }
+    return pending;
+  }
+
+  // Only the visual on screen reports its save state.
+  function mark(m: MadeItem, state: SaveState) {
+    if (currentMadeId.current === m.id) setSaveState(state);
+  }
+
+  // Files a finished cut-out with its job, once both are ready. Watching the run meanwhile keeps it
+  // from being skipped if the person moves on to another photo.
+  function saveCutoutWhenReady(job: Promise<Id<"jobs"> | null>, cutRun: CutoutRun) {
+    const release = cutRun.subscribe(() => {});
+    void job
+      .then(async (jobId) => {
+        if (!jobId) return;
+        await cutRun.done;
+        const state = cutRun.getState();
+        if (state.stage !== "done" || !state.blob) return;
+        const cutoutStorageId = await upload(state.blob, "image/png");
+        await setCutout({ jobId, cutoutStorageId });
+      })
+      .catch(() => {})
+      .finally(release);
+  }
+
+  // Saves a made visual once: profile → photo upload → job → done, then the cut-out when it is ready.
+  // Resolves to the job id, or null when it couldn't be saved here. Never rejects.
+  function ensureSaved(m: MadeItem): Promise<Id<"jobs"> | null> {
+    const known = saves.current.get(m.id);
+    if (known) return known;
+    // Only the visual on screen is ever saved, and its results report the photo choice.
+    const leaveOut = m.kind === "greeting" && photoLeftOut.current;
+    const job = (async (): Promise<Id<"jobs"> | null> => {
+      if (++busyCount.current === 1) busyChange.current?.(true);
+      mark(m, "saving");
+      try {
+        // A reopened saved item already belongs to this account and vertical.
+        if (!m.savedJobId) {
+          const saved = await ensureProfile({
+            industry,
+            market: profile?.market ?? defaultMarket(),
+            businessName: m.words.businessName ?? "",
+            contact: m.words.contact,
+          });
+          if (saved.industry !== industry) {
+            // Set up for another vertical: the page is moving there, so nothing is filed here.
+            saves.current.delete(m.id);
+            mark(m, "idle");
+            return null;
+          }
+        }
+        const jobId =
+          m.savedJobId ??
+          (await createJob({
+            industry,
+            kind: m.kind,
+            headline: m.words.headline,
+            message: m.words.message,
+            details: m.words.details,
+            validity: m.words.validity,
+            finePrint: m.words.finePrint,
+            photoStorageId: m.file && !leaveOut ? await uploadOnce(m.photoKey, m.file) : undefined,
+          }));
+        void markDone({ jobId }).catch(() => {});
+        const owed = missed.current.get(m.id) ?? 0;
+        missed.current.delete(m.id);
+        for (let i = 0; i < owed; i++) void logDownload({ jobId }).catch(() => {});
+        mark(m, "saved");
+        // The form's own draft is done with, unless a newer visual is already on it. A reopened item never touches it.
+        if (!m.savedJobId && currentMadeId.current === m.id) clearDraft(industry);
+        return jobId;
+      } catch {
+        saves.current.delete(m.id);
+        mark(m, "error");
+        return null;
+      } finally {
+        if (--busyCount.current === 0) busyChange.current?.(false);
+      }
+    })();
+    saves.current.set(m.id, job);
+    if (m.cutout && !m.savedHasCutout && !leaveOut) saveCutoutWhenReady(job, m.cutout);
+    return job;
+  }
+
+  // After each Share, Download or Save all that handed over a file.
+  function delivered() {
+    if (!signedIn || !made) return;
+    const id = made.id;
+    void ensureSaved(made).then((jobId) => {
+      if (jobId) void logDownload({ jobId }).catch(() => {});
+      else missed.current.set(id, (missed.current.get(id) ?? 0) + 1);
+    });
+  }
+
+  function openJob(job: NonNullable<typeof jobs>[number]) {
+    const cutRun = job.photoUrl ? (job.cutoutUrl ? cutoutFromUrl(job.cutoutUrl) : startCutout(job.photoUrl)) : null;
+    setMade({
+      id: ++madeCounter.current,
+      kind: job.kind,
+      words: {
+        headline: job.headline,
+        message: job.message,
+        details: job.details,
+        validity: job.validity,
+        finePrint: job.finePrint,
+        businessName: profile?.businessName,
+        contact: profile?.contact,
+      },
+      photoUrl: job.photoUrl,
+      cutout: cutRun,
+      photoKey: ++photoKeyCounter.current,
+      file: null,
+      savedJobId: job._id,
+      savedHasCutout: !!job.cutoutUrl,
+    });
+    setSaveState("saved");
+    setView("results");
+    requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ block: "start" }));
+  }
+
+  const near = message.length >= SEASON.messageMax - 20;
+  const veryNear = message.length >= SEASON.messageMax - 10;
+  const extrasOpen = showExtras || validity !== "" || finePrint !== "";
+  const photoShown = !greeting || photoOpen || file !== null;
+  const updating = made !== null && made.kind === kind;
+  const makeLabel = greeting ? (updating ? "Update my greeting" : "Make my greeting") : updating ? "Update my ads" : "Make my ads";
+  // Make waits for the sign-in state (and the saved business) to load, and says so.
+  const submitLabel = accountKnown ? makeLabel : signedIn ? "Loading your business details…" : "Loading…";
+
+  function textField(
+    key: FieldKey,
+    value: string,
+    set: (next: string) => void,
+    maxLength: number,
+    opts: { required?: boolean; multiline?: boolean; inputRef?: RefObject<HTMLInputElement | null> } = {},
+  ) {
+    const f = fields[key];
+    const common = { id: key, name: key, value, maxLength, placeholder: `e.g. ${f.placeholder}`, "aria-describedby": f.hint ? `${key}-hint` : undefined };
+    return (
+      <div>
+        <label htmlFor={key}>{f.label}</label>
+        {opts.multiline ? (
+          <textarea {...common} onChange={(e) => set(e.target.value)} rows={2} style={{ ...input, resize: "vertical", lineHeight: 1.4 }} />
         ) : (
-          <p id="photo-label" style={{ margin: 0 }}>Photo of your {noun}</p>
+          <input {...common} ref={opts.inputRef} onChange={(e) => set(e.target.value)} required={opts.required} style={input} />
         )}
-        <PhotoGuide key={kind} industry={industry} defaultOpen={!greeting && jobs !== undefined && !hasOffers} />
+        {f.hint && <p id={`${key}-hint`} style={hint}>{f.hint}</p>}
+      </div>
+    );
+  }
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-          <button type="button" onClick={() => cameraRef.current?.click()} disabled={busy} style={{ ...pickButton, background: INK, color: "#fff" }}>
+  let businessBlock: React.ReactNode = null;
+  if (showBusinessInputs) {
+    businessBlock = (
+      <>
+        <label htmlFor="biz-name" style={{ fontWeight: 600 }}>Your {copy.businessNoun}'s name</label>
+        <input
+          id="biz-name"
+          ref={nameRef}
+          value={businessName}
+          onChange={(e) => setBusinessName(e.target.value)}
+          required
+          maxLength={NAME_MAX}
+          autoComplete="organization"
+          placeholder={`e.g. ${copy.businessNamePlaceholder}`}
+          aria-describedby="biz-name-hint"
+          style={input}
+        />
+        <p id="biz-name-hint" style={hint}>Goes at the bottom of your {greeting ? "greeting" : "ads"}.</p>
+        <label htmlFor="biz-contact">
+          Phone, website or Instagram <span style={{ color: MUTED }}>· optional</span>
+        </label>
+        <input
+          id="biz-contact"
+          ref={contactRef}
+          value={contact}
+          onChange={(e) => setContact(e.target.value)}
+          maxLength={NAME_MAX}
+          placeholder={`e.g. ${copy.contactPlaceholder}`}
+          style={input}
+        />
+      </>
+    );
+  } else if (accountKnown && profile) {
+    businessBlock = (
+      <div style={{ border: `1px solid ${GOLD}`, background: "#FDF6E7", borderRadius: 10, padding: "10px 14px", fontSize: 15, lineHeight: 1.4, margin: "0 0 16px", display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 10 }}>
+        <span style={{ flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere" }}>
+          From <b>{profile.businessName}</b>
+          {profile.contact ? ` · ${profile.contact}` : ""}
+        </span>
+        <button type="button" onClick={() => openBusinessEditor(profile.contact ? "name" : "contact")} style={linkButton}>
+          {profile.contact ? "Change" : "Add phone or website"}
+        </button>
+      </div>
+    );
+  }
+
+  let cutStatus: React.ReactNode = null;
+  if (cut) {
+    switch (cut.stage) {
+      case "loading":
+        cutStatus = <p style={{ margin: "4px 0 8px" }}>Getting the cut-out tool ready…</p>;
+        break;
+      case "download":
+        cutStatus = <p style={{ margin: "4px 0 8px" }}>Getting the cut-out tool ready (first time only, about 100 MB)… {Math.round(cut.fraction * 100)}%</p>;
+        break;
+      case "cutting":
+        cutStatus = (
+          <p style={{ margin: "4px 0 8px" }}>
+            Cutting out your {noun} in the background<Seconds from={cut.startedAt} />. Keep typing.
+          </p>
+        );
+        break;
+      case "done":
+        cutStatus = (
+          <>
+            <p style={{ margin: "4px 0 8px" }}>Cut-out ready ✓</p>
+            {cut.cut.touchesEdge && (
+              <p style={note}>Part of your {noun} looks cut off. Retake it with the whole {noun} in frame for the best {greeting ? "greeting" : "ads"}.</p>
+            )}
+          </>
+        );
+        break;
+      case "bad":
+        cutStatus = (
+          <p style={note}>
+            We couldn't cleanly cut out the {noun}. A photo with the whole {noun} and a plain background works best.
+            {greeting ? "" : " You can still continue: your ads will use the photo as it is."}
+          </p>
+        );
+        break;
+      case "failed":
+        cutStatus = <p style={{ margin: "4px 0 0" }}>The cut-out tool didn't finish downloading. Check your internet.</p>;
+        break;
+    }
+  }
+
+  const photoBlock = (
+    <div ref={photoRef} role="group" aria-labelledby="photo-label" style={{ position: "relative", marginBottom: 6, scrollMarginTop: 8 }}>
+      <p id="photo-label" style={{ margin: 0, fontWeight: 600 }}>{greeting ? `Photo of your ${noun} (optional)` : `Photo of your ${noun}`}</p>
+      <PhotoTip industry={industry} />
+      {preview ? (
+        <>
+          <img src={preview} alt="Your photo" style={{ display: "block", width: "100%", maxHeight: 220, objectFit: "contain", background: "#f4f5f7", borderRadius: 8 }} />
+          <div style={{ display: "flex", flexWrap: "wrap", columnGap: 20, margin: "2px 0 4px" }}>
+            <button type="button" ref={retakeRef} onClick={() => choosePhoto(cameraRef.current)} style={linkButton}>Retake</button>
+            <button type="button" onClick={() => choosePhoto(galleryRef.current)} style={linkButton}>Choose another</button>
+            {greeting && <button type="button" onClick={clearPhoto} style={linkButton}>Remove photo</button>}
+          </div>
+          <div aria-live="polite">
+            {warnings.length > 0 && (
+              <div style={{ ...note, margin: "0 0 10px" }}>
+                <b style={{ display: "block", marginBottom: 4 }}>Quick check on this photo</b>
+                <ul style={{ margin: "0 0 6px", paddingLeft: 20 }}>
+                  {warnings.map((w) => <li key={w.id}>{w.message}</li>)}
+                </ul>
+                <span style={{ color: MUTED }}>You can still continue.</span>
+              </div>
+            )}
+          </div>
+          <div role="status" style={{ fontSize: 14, lineHeight: 1.4, color: INK }}>{cutStatus}</div>
+          {cut?.stage === "failed" && file && (
+            <button type="button" onClick={() => setRun(startCutout(file))} style={{ ...linkButton, fontSize: 14, marginBottom: 6 }}>Try again</button>
+          )}
+        </>
+      ) : (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+          <button type="button" ref={takeRef} onClick={() => choosePhoto(cameraRef.current)} style={{ ...pickButton, background: INK, color: "#fff" }}>
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={AMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
               <circle cx="12" cy="13" r="3.5" />
             </svg>
             Take a photo
           </button>
-          <button type="button" onClick={() => galleryRef.current?.click()} disabled={busy} style={{ ...pickButton, background: "#fff", color: INK }}>
+          <button type="button" onClick={() => choosePhoto(galleryRef.current)} style={{ ...pickButton, background: "#fff", color: INK }}>
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="5" width="18" height="14" rx="2" />
               <path d="M3 16l5-5 4 4 3-3 6 6" />
@@ -347,37 +843,20 @@ export default function NewAd({
             Choose from gallery
           </button>
         </div>
-        <input ref={cameraRef} type="file" accept={ACCEPT} capture="environment" onChange={onPicked} tabIndex={-1} aria-hidden="true" style={offscreen} />
-        <input ref={galleryRef} type="file" accept={ACCEPT} onChange={onPicked} tabIndex={-1} aria-hidden="true" style={offscreen} />
-        {photoError && <p role="alert" style={{ color: "crimson", marginTop: -4 }}>{photoError}</p>}
-      </div>
-
-      {preview && <img src={preview} alt="Your photo" style={{ display: "block", width: "100%", maxHeight: 360, objectFit: "contain", background: "#f4f5f7", borderRadius: 8, marginBottom: greeting ? 4 : 14 }} />}
-      {preview && greeting && (
-        <p style={{ margin: "0 0 10px" }}>
-          <button type="button" onClick={clearPhoto} disabled={busy} style={linkButton}>Remove photo</button>
-        </p>
       )}
-      <div aria-live="polite">
-        {warnings.length > 0 && (
-          <div style={{ background: "#FFF6D6", border: `1px solid ${AMBER}`, borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 15, lineHeight: 1.4, color: INK }}>
-            <b style={{ display: "block", marginBottom: 4 }}>Quick check on this photo</b>
-            <ul style={{ margin: "0 0 6px", paddingLeft: 20 }}>
-              {warnings.map((w) => <li key={w.id}>{w.message}</li>)}
-            </ul>
-            <span style={{ color: MUTED }}>You can still continue.</span>
-          </div>
-        )}
+      <div role="status" style={{ fontSize: 14, lineHeight: 1.4, color: INK }}>
+        {shrinking && <p style={{ margin: "0 0 10px" }}>Getting your photo ready…</p>}
       </div>
-    </>
+      <input ref={cameraRef} type="file" accept={ACCEPT} capture="environment" onChange={onPicked} tabIndex={-1} aria-hidden="true" style={offscreen} />
+      <input ref={galleryRef} type="file" accept={ACCEPT} onChange={onPicked} tabIndex={-1} aria-hidden="true" style={offscreen} />
+      {photoError && <p role="alert" style={{ color: "crimson", fontSize: 15, margin: "0 0 10px" }}>{photoError}</p>}
+      <PhotoGuide industry={industry} openSignal={guideSignal} />
+    </div>
   );
 
   const greetingFields = (
     <>
-      <p style={{ margin: "0 0 18px", color: MUTED, lineHeight: 1.45 }}>
-        Pick your words and add a photo if you like. You get it sized for WhatsApp, Instagram status and email, plus a 4×6 card to print and tuck into gift boxes.
-      </p>
-
+      {businessBlock}
       <div role="radiogroup" aria-labelledby="greeting-line-label" style={{ marginBottom: line === OWN ? 4 : 18 }}>
         <span id="greeting-line-label" style={groupLabel}>Greeting</span>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -392,127 +871,132 @@ export default function NewAd({
       {line === OWN && (
         <div style={{ marginTop: 10 }}>
           <label htmlFor="greeting-own">Your greeting</label>
-          <input id="greeting-own" value={ownLine} onChange={(e) => setOwnLine(e.target.value)} maxLength={HEADLINE_MAX} placeholder="Happy Diwali from all of us" style={input} />
+          <input id="greeting-own" ref={ownRef} value={ownLine} onChange={(e) => setOwnLine(e.target.value)} maxLength={HEADLINE_MAX} placeholder="Happy Diwali from all of us" style={input} />
         </div>
       )}
 
       <label htmlFor="greeting-message" style={{ fontWeight: 600 }}>Your message</label>
       <textarea
         id="greeting-message"
+        ref={messageRef}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         maxLength={SEASON.messageMax}
         rows={3}
-        aria-describedby="greeting-message-count"
-        style={{ ...input, margin: "6px 0 4px", resize: "vertical", lineHeight: 1.4, fontFamily: "inherit" }}
+        aria-describedby={near ? "greeting-message-count" : undefined}
+        style={{ ...input, margin: "6px 0 4px", resize: "vertical", lineHeight: 1.4 }}
       />
-      <p id="greeting-message-count" style={{ margin: "0 0 12px", fontSize: 13, textAlign: "right", color: near ? MAROON : MUTED, fontWeight: near ? 600 : 400 }}>
-        {message.length} of {SEASON.messageMax} characters
-      </p>
-
-      <div role="group" aria-labelledby="greeting-ideas-label" style={{ marginBottom: 20 }}>
-        <span id="greeting-ideas-label" style={{ display: "block", fontSize: 14, color: MUTED, margin: "0 0 8px" }}>Or tap one to use it</span>
-        {copy.greeting.suggestions.map((text) => (
-          <button key={text} type="button" aria-pressed={message === text} onClick={() => setMessage(text)} style={suggestion(message === text)}>
-            {text}
-          </button>
-        ))}
+      {near && (
+        <p id="greeting-message-count" style={{ margin: "0 0 4px", fontSize: 13, textAlign: "right", color: veryNear ? MAROON : MUTED, fontWeight: veryNear ? 600 : 400 }}>
+          {message.length} of {SEASON.messageMax} characters
+        </p>
+      )}
+      <div style={{ margin: "0 0 14px" }}>
+        <button type="button" onClick={nextMessage} style={linkButton}>Try another message</button>
       </div>
+
+      {photoShown ? (
+        photoBlock
+      ) : (
+        <div style={{ marginBottom: 14 }}>
+          <button
+            type="button"
+            onClick={openPhoto}
+            style={{ display: "block", width: "100%", minHeight: 48, padding: "12px 16px", fontSize: 16, fontWeight: 600, fontFamily: "inherit", border: `2px solid ${INK}`, background: "#fff", color: INK, borderRadius: 10, cursor: "pointer" }}
+          >
+            + Add a photo of your {noun} (optional)
+          </button>
+          <p style={{ margin: "6px 0 0", fontSize: 14, color: MUTED, lineHeight: 1.4 }}>Your real {noun} on the festive background.</p>
+        </div>
+      )}
+    </>
+  );
+
+  const offerFields = (
+    <>
+      {photoBlock}
+      {textField("headline", headline, setHeadline, HEADLINE_MAX, { required: true, inputRef: headlineRef })}
+      {textField("details", details, setDetails, 80)}
+      {extrasOpen ? (
+        <>
+          {textField("validity", validity, setValidity, 40, { inputRef: validityRef })}
+          {textField("finePrint", finePrint, setFinePrint, 200, { multiline: true })}
+        </>
+      ) : (
+        <div style={{ margin: "-6px 0 10px" }}>
+          <button
+            type="button"
+            onClick={() => {
+              setShowExtras(true);
+              requestAnimationFrame(() => validityRef.current?.focus());
+            }}
+            style={linkButton}
+          >
+            + Add an end date or fine print (optional)
+          </button>
+        </div>
+      )}
+      {businessBlock}
     </>
   );
 
   return (
-    <div>
+    <div ref={rootRef} style={{ scrollMarginTop: 8 }}>
       <style>{CHIP_CSS}</style>
-      <h2 id="make-kind-label" style={{ fontSize: 20, margin: "0 0 12px" }}>What do you want to make?</h2>
-      <div role="radiogroup" aria-labelledby="make-kind-label" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, marginBottom: 22 }}>
-        {kinds.map((k) => (
-          <label key={k.key} style={kindCard(kind === k.key)}>
-            {k.art}
-            <span style={{ display: "flex", flexDirection: "column", gap: 4, padding: "10px 12px 12px" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="radio"
-                  name="make-kind"
-                  value={k.key}
-                  checked={kind === k.key}
-                  onChange={() => chooseKind(k.key)}
-                  disabled={busy}
-                  aria-describedby={`make-kind-${k.key}`}
-                  style={{ width: 20, height: 20, margin: 0, flexShrink: 0, accentColor: INK }}
-                />
-                <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>{k.title}</span>
-              </span>
-              <span id={`make-kind-${k.key}`} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: k.metaColor, lineHeight: 1.3 }}>{k.meta}</span>
-                <span style={{ fontSize: 14, color: MUTED, lineHeight: 1.35 }}>{k.line}</span>
-              </span>
-            </span>
-          </label>
-        ))}
-      </div>
-
-      <form onSubmit={submit} aria-label={greeting ? SEASON.label : "Offer ad"}>
-        {greeting && greetingFields}
-        {photoSection}
-
-        <div hidden={greeting}>
-          {FIELDS.map(({ key, maxLength, required, multiline }) => {
-            const f = fields[key];
-            const props = { id: key, name: key, maxLength, placeholder: f.placeholder, style: input, "aria-describedby": f.hint ? `${key}-hint` : undefined };
-            return (
-              <div key={key}>
-                <label htmlFor={key}>{f.label}</label>
-                {multiline ? <textarea {...props} rows={2} /> : <input {...props} required={required && !greeting} />}
-                {f.hint && <p id={`${key}-hint`} style={hint}>{f.hint}</p>}
-              </div>
-            );
-          })}
+      <div style={{ display: view === "form" ? undefined : "none" }}>
+        <div role="radiogroup" aria-label="What to make" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
+          {(["greeting", "offer"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={kind === k}
+              tabIndex={kind === k ? 0 : -1}
+              data-kind={k}
+              onClick={() => chooseKind(k)}
+              onKeyDown={onKindKey}
+              style={kindButton(kind === k)}
+            >
+              {k === "greeting" ? SEASON.label : "Offer ad"}
+            </button>
+          ))}
         </div>
 
-        {greeting && (
-          <div style={{ border: `1px solid ${GOLD}`, background: "#FDF6E7", borderRadius: 10, padding: "12px 14px", marginBottom: 16, fontSize: 15, lineHeight: 1.4 }}>
-            <span style={{ display: "block", fontSize: 13, color: MUTED, marginBottom: 4 }}>Signed at the bottom of your greeting</span>
-            <b style={{ display: "block", overflowWrap: "anywhere" }}>{profile.businessName}</b>
-            {profile.contact ? (
-              <span style={{ display: "block", overflowWrap: "anywhere" }}>{profile.contact}</span>
-            ) : (
-              <span style={{ display: "block", color: MUTED, fontSize: 14 }}>Add your phone or website with “Edit business” at the top, so people can reach you.</span>
-            )}
+        <form onSubmit={make} noValidate aria-label={greeting ? SEASON.label : "Offer ad"}>
+          {greeting ? greetingFields : offerFields}
+
+          <div style={{ position: "sticky", bottom: 0, zIndex: 2, background: "#fff", padding: "10px 0 calc(10px + env(safe-area-inset-bottom))", boxShadow: "0 -1px 0 #e3e6eb", marginTop: 8 }}>
+            {error && <p role="alert" style={{ color: "crimson", fontSize: 15, margin: "0 0 8px" }}>{error}</p>}
+            <button
+              type="submit"
+              disabled={!accountKnown}
+              style={{ width: "100%", minHeight: 52, padding: "12px 20px", fontSize: 17, fontWeight: 700, fontFamily: "inherit", background: AMBER, color: INK, border: "none", borderRadius: 10, cursor: accountKnown ? "pointer" : "default", opacity: accountKnown ? 1 : 0.6 }}
+            >
+              {submitLabel}
+            </button>
           </div>
-        )}
-
-        <button type="submit" disabled={busy} style={{ width: "100%", minHeight: 52, padding: "12px 20px", fontSize: 17, fontWeight: 700, background: AMBER, color: INK, border: "none", borderRadius: 10, cursor: "pointer" }}>
-          {busy ? "Saving…" : greeting ? "Make my greeting" : "Save offer"}
-        </button>
-        {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
-        <div role="status">
-          {saved && <p style={{ color: "green" }}>{saved === "greeting" ? "Saved. Your greetings are below." : "Saved. Your ads are below."}</p>}
-        </div>
-      </form>
-
-      <div ref={resultsRef} style={{ scrollMarginTop: 16 }}>
-        {activeJob && (activeJob.kind === "greeting" || activeJob.photoUrl) && (
-          <AdResults
-            key={activeJob._id}
-            job={{ _id: activeJob._id, photoUrl: activeJob.photoUrl, cutoutUrl: activeJob.cutoutUrl }}
-            kind={activeJob.kind}
-            offer={{
-              headline: activeJob.headline,
-              details: activeJob.details,
-              validity: activeJob.validity,
-              finePrint: activeJob.finePrint,
-              message: activeJob.message,
-              businessName: profile.businessName,
-              contact: profile.contact,
-            }}
-            industry={activeJob.industry}
-            onClose={() => setActiveJobId(null)}
-          />
-        )}
+        </form>
       </div>
 
-      {jobs && jobs.length > 0 && (
+      {made && (
+        <div ref={resultsRef} style={{ display: view === "results" ? undefined : "none", scrollMarginTop: 8 }}>
+          <AdResults
+            key={`${made.kind}-${made.photoKey}`}
+            industry={industry}
+            made={made}
+            signedIn={signedIn === true}
+            saveState={saveState}
+            onDelivered={delivered}
+            onRetrySave={() => void ensureSaved(made)}
+            onRetryCutout={retryCutout}
+            onChangeWords={made.savedJobId ? undefined : changeWords}
+            onMakeAnother={makeAnother}
+            onPhotoChoice={(leftOut) => (photoLeftOut.current = leftOut)}
+          />
+        </div>
+      )}
+
+      {signedIn && jobs && jobs.length > 0 && (
         <section style={{ marginTop: 32 }}>
           <h2 style={{ fontSize: 18 }}>Saved greetings and offers</h2>
           {jobs.map((job) => {
@@ -532,13 +1016,17 @@ export default function NewAd({
                   <b lang={langOf(job.headline)} style={{ display: "block", overflowWrap: "anywhere" }}>{job.headline}</b>
                   {sub && <div style={{ color: "#666", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
                 </div>
-                <button
-                  onClick={() => { setActiveJobId(job._id); resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-                  aria-label={`Open ${label.toLowerCase()}: ${job.headline}`}
-                  style={{ minHeight: 44, minWidth: 64, padding: "8px 12px", cursor: "pointer", flexShrink: 0 }}
-                >
-                  Open
-                </button>
+                {/* An offer whose photo is gone can't be drawn again. */}
+                {(job.kind === "greeting" || job.photoUrl) && (
+                  <button
+                    type="button"
+                    onClick={() => openJob(job)}
+                    aria-label={`Open ${label.toLowerCase()}: ${job.headline}`}
+                    style={{ minHeight: 44, minWidth: 64, padding: "8px 14px", border: `1px solid ${INK}`, borderRadius: 8, background: "#fff", color: INK, font: "inherit", fontSize: 15, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    Open
+                  </button>
+                )}
               </div>
             );
           })}

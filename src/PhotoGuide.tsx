@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { INDUSTRIES, type IndustryKey } from "../convex/industries";
 
 const INK = "#111317";
@@ -583,14 +583,47 @@ function Badge({ ok }: { ok?: boolean }) {
   );
 }
 
-export default function PhotoGuide({ industry, defaultOpen }: { industry: IndustryKey; defaultOpen: boolean }) {
+// The vertical's first photo tip as one line, shown above the photo buttons so the most
+// important advice is visible without opening the guide.
+export function PhotoTip({ industry }: { industry: IndustryKey }) {
+  const tip = INDUSTRIES[industry].photoTips[0];
+  return (
+    <p style={{ fontSize: 15, lineHeight: 1.4, margin: "4px 0 10px", color: INK }}>
+      <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: AMBER, marginRight: 8, verticalAlign: "middle" }} />
+      <b>{tip.title}.</b> <span style={{ color: MUTED }}>{tip.detail}</span>
+    </p>
+  );
+}
+
+// openSignal: bump it to open the guide (a photo warning or a rejected cut-out).
+export default function PhotoGuide({ industry, defaultOpen = false, openSignal = 0 }: { industry: IndustryKey; defaultOpen?: boolean; openSignal?: number }) {
   const copy = INDUSTRIES[industry];
   const art = ART[industry];
   const [open, setOpen] = useState(defaultOpen);
+  const ref = useRef<HTMLDetailsElement>(null);
+  // Only signals sent after mount open it, so switching greeting/offer doesn't reopen it or jump the page.
+  const seen = useRef(openSignal);
   const Good = art.good;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (openSignal > 0 && openSignal !== seen.current && el) {
+      el.open = true;
+      setOpen(true);
+      // Don't pull the page away from a field the person is typing in.
+      const active = document.activeElement;
+      const typing = (active instanceof HTMLInputElement && active.type !== "file") || active instanceof HTMLTextAreaElement;
+      if (!typing) {
+        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        el.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+      }
+    }
+    seen.current = openSignal;
+  }, [openSignal]);
 
   return (
     <details
+      ref={ref}
       className="mmv-photo-guide"
       open={defaultOpen}
       onToggle={(e) => setOpen(e.currentTarget.open)}

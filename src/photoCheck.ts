@@ -38,6 +38,44 @@ async function decode(file: File): Promise<Decoded> {
   }
 }
 
+const SHRINK_MAX = 2048;
+const KEEP_BYTES = 2.5 * 1024 * 1024;
+
+// Phone photos are often 4000px+ and 5–10 MB. A ≤2048px JPEG makes the cut-out, the drawing
+// and the upload much faster with no visible loss at ad sizes. createImageBitmap already
+// applies the phone's rotation. Never throws: on any failure the original file comes back.
+export async function shrinkPhoto(file: File): Promise<File> {
+  try {
+    const { source, width, height, release } = await decode(file);
+    try {
+      if (!width || !height) return file;
+      const longest = Math.max(width, height);
+      if (file.type === "image/jpeg" && longest <= SHRINK_MAX && file.size <= KEEP_BYTES) return file;
+      const scale = Math.min(1, SHRINK_MAX / longest);
+      const w = Math.max(1, Math.round(width * scale));
+      const h = Math.max(1, Math.round(height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return file;
+      // White under transparent PNGs, since JPEG has no transparency.
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(source, 0, 0, w, h);
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+      if (!blob) return file;
+      const base = file.name.replace(/\.[^./]*$/, "") || "photo";
+      return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+    } finally {
+      release();
+    }
+  } catch {
+    return file;
+  }
+}
+
 // Quick checks on a freshly picked photo. Warnings only: never blocks, never throws.
 export async function checkPhoto(file: File, productNoun: string): Promise<PhotoWarning[]> {
   try {

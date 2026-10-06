@@ -25,6 +25,8 @@ export type Placement = { maxWidth: number; maxHeight: number; mode: "floor" | "
 export type AdSize = {
   key: string;
   label: string;
+  // One or two words for the size switcher under the preview.
+  short?: string;
   width: number;
   height: number;
   // Instagram/WhatsApp stories cover the top and bottom with UI.
@@ -35,20 +37,20 @@ export type AdSize = {
 };
 
 export const AD_SIZES: AdSize[] = [
-  { key: "instagram-post", label: "Instagram post", width: 1080, height: 1080 },
-  { key: "instagram-portrait", label: "Instagram portrait", width: 1080, height: 1350 },
-  { key: "story", label: "Story / WhatsApp status", width: 1080, height: 1920, safeTop: 250, safeBottom: 250 },
-  { key: "facebook", label: "Facebook link", width: 1200, height: 628 },
-  { key: "google-banner", label: "Google banner", width: 300, height: 250 },
+  { key: "instagram-post", label: "Square post · Instagram, Facebook, WhatsApp", short: "Square", width: 1080, height: 1080 },
+  { key: "instagram-portrait", label: "Tall post · Instagram", short: "Tall", width: 1080, height: 1350 },
+  { key: "story", label: "Status or story · WhatsApp, Instagram", short: "Status", width: 1080, height: 1920, safeTop: 250, safeBottom: 250 },
+  { key: "facebook", label: "Wide · Facebook link or website", short: "Wide", width: 1200, height: 628 },
+  { key: "google-banner", label: "Small banner · Google ads", short: "Banner", width: 300, height: 250 },
 ];
 
 // WhatsApp chat first: it is where most greetings get sent.
 export const GREETING_SIZES: AdSize[] = [
-  { key: "whatsapp", label: "WhatsApp chat", width: 1080, height: 1080 },
-  { key: "status", label: "WhatsApp / Instagram status", width: 1080, height: 1920, safeTop: 250, safeBottom: 250 },
-  { key: "instagram", label: "Instagram post", width: 1080, height: 1350 },
-  { key: "email", label: "Email / LinkedIn", width: 1200, height: 628 },
-  { key: "card", label: "Gift box card (4×6 in, print)", width: 1200, height: 1800, print: true },
+  { key: "whatsapp", label: "WhatsApp chat", short: "WhatsApp", width: 1080, height: 1080 },
+  { key: "status", label: "WhatsApp or Instagram status", short: "Status", width: 1080, height: 1920, safeTop: 250, safeBottom: 250 },
+  { key: "instagram", label: "Instagram post", short: "Instagram", width: 1080, height: 1350 },
+  { key: "email", label: "Email or LinkedIn", short: "Email", width: 1200, height: 628 },
+  { key: "card", label: "Print card (4×6 in)", short: "Print card", width: 1200, height: 1800, print: true },
 ];
 
 const COLORS = { panel: "#111317", text: "#FFFFFF", muted: "#B9BDC6", accent: "#F5B700", accentText: "#111317" };
