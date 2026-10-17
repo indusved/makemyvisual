@@ -2,6 +2,9 @@ export const BRAND = "MakeMyVisual";
 
 export type FieldCopy = { label: string; placeholder: string; hint?: string };
 export type PhotoTip = { id: string; title: string; detail: string };
+// Where customers can find the business, in the order the form shows them (same values as contactKindValidator).
+export const CONTACT_KINDS = ["instagram", "whatsapp", "website"] as const;
+export type ContactKind = (typeof CONTACT_KINDS)[number];
 
 // One entry per vertical, in home-page order (gifting first for the Diwali season). A business belongs to exactly one vertical: it is
 // chosen once (home page or first setup screen) and verticals are never mixed.
@@ -12,6 +15,7 @@ export type PhotoTip = { id: string; title: string; detail: string };
 // the item on the ground with a contact shadow; "hanging" hangs it on the wall
 // with a soft shadow behind (clothes on a hanger).
 // backgrounds: preset keys from backgrounds.ts, in picker order (first = default).
+// contactExamples: placeholder for each contact kind; defaultContactKind: the one picked at first.
 export const INDUSTRIES = {
   gifting: {
     label: "Gifting",
@@ -24,7 +28,8 @@ export const INDUSTRIES = {
     productNoun: "gift",
     tagline: "Upload a photo of your gift box or hamper, type your offer, get ads in every social size in 2 minutes.",
     businessNamePlaceholder: "The Gift Studio",
-    contactPlaceholder: "thegiftstudio.in or @thegiftstudio",
+    contactExamples: { instagram: "@thegiftstudio", whatsapp: "98765 43210", website: "thegiftstudio.in" },
+    defaultContactKind: "instagram",
     fields: {
       headline: { label: "Offer headline", placeholder: "Diwali gift hampers from ₹999" },
       details: { label: "Price (optional)", placeholder: "Now ₹1,499 · MRP ₹1,999" },
@@ -72,7 +77,8 @@ export const INDUSTRIES = {
     productNoun: "outfit",
     tagline: "Upload a photo of your outfit, type your offer, get ads in every social size in 2 minutes.",
     businessNamePlaceholder: "Kavya Ethnic",
-    contactPlaceholder: "kavyaethnic.in or @kavyaethnic",
+    contactExamples: { instagram: "@kavyaethnic", whatsapp: "98765 43210", website: "kavyaethnic.in" },
+    defaultContactKind: "instagram",
     fields: {
       headline: { label: "Offer headline", placeholder: "Festive kurtas, flat 30% off" },
       details: { label: "Price (optional)", placeholder: "From ₹1,199 · MRP ₹1,799" },
@@ -119,7 +125,8 @@ export const INDUSTRIES = {
     productNoun: "product",
     tagline: "Upload your product photo, type your offer, get ads in every social size in 2 minutes.",
     businessNamePlaceholder: "Glow & Co.",
-    contactPlaceholder: "glowandco.in or @glowandco",
+    contactExamples: { instagram: "@glowandco", whatsapp: "98765 43210", website: "glowandco.in" },
+    defaultContactKind: "instagram",
     fields: {
       headline: { label: "Offer headline", placeholder: "Flat 30% off our bestselling serum" },
       details: { label: "Price (optional)", placeholder: "Now ₹699 · MRP ₹999" },
@@ -166,7 +173,8 @@ export const INDUSTRIES = {
     productNoun: "car",
     tagline: "Upload your car photo, type your offer, get ads in every social size in 2 minutes.",
     businessNamePlaceholder: "Sharma Motors",
-    contactPlaceholder: "98765 43210 or sharmamotors.in",
+    contactExamples: { instagram: "@sharmamotors", whatsapp: "98765 43210", website: "sharmamotors.in" },
+    defaultContactKind: "whatsapp",
     fields: {
       headline: { label: "Offer headline", placeholder: "₹50,000 off the XUV700" },
       details: { label: "Price or EMI (optional)", placeholder: "EMI from ₹9,999/month" },

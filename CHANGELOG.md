@@ -14,3 +14,8 @@
 - Mon 5 Oct: fashion clothes on a hanger hang on the wall with a soft shadow instead of standing on the floor
 - Mon 5 Oct: any business can make a branded Diwali greeting (Happy Diwali / शुभ दीपावली …, ready-made thank-you message, optional photo) in WhatsApp, status, Instagram, email and a 4×6 print card for gift boxes, and share it straight to WhatsApp from a phone
 - Mon 5 Oct: the home page leads with Diwali greetings, shows 9 example greetings and ads, and lists Gifting first
+- Sat 17 Oct: visitors make and see their own greeting or offer ads before signing in; the email and 6-digit code are asked only when they tap Share, Download or Save all, and the visual is saved right after the code
+- Sat 17 Oct: if the phone reloads while someone fetches the sign-in code, their words, photo and results come back
+- Sat 17 Oct: a shorter form (Greeting | Offer switch at the top, end date and fine print behind a link) and results that open at the top with a large preview, a size switcher and one main Share or Download button
+- Sat 17 Oct: the cut-out starts as soon as a photo is picked, a quick version shows right away, and a seconds counter shows while the cut-out finishes
+- Sat 17 Oct: businesses pick Instagram, WhatsApp or Website for their contact line, and greetings and ads show the matching small icon before it (pasted Instagram links are tidied to @handle)

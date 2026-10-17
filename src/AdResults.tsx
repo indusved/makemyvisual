@@ -217,7 +217,7 @@ export default function AdResults({
         if (cancelled) return;
         let draw: (size: AdSize) => HTMLCanvasElement;
         if (greeting) {
-          const lines = { headline: words.headline, message: words.message, businessName: words.businessName, contact: words.contact };
+          const lines = { headline: words.headline, message: words.message, businessName: words.businessName, contact: words.contact, contactKind: words.contactKind };
           // Without the cut-out the photo still appears, as a small framed print.
           draw = (size) => renderGreeting(photo, lines, size, background!, withCut?.canvas ?? null, config.placement);
         } else {
@@ -250,7 +250,7 @@ export default function AdResults({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [look, skipPhoto, made.photoUrl, made.kind, words.headline, words.message, words.details, words.validity, words.finePrint, words.businessName, words.contact, mode, cut, bgUrl, lookLabel, industry]);
+  }, [look, skipPhoto, made.photoUrl, made.kind, words.headline, words.message, words.details, words.validity, words.finePrint, words.businessName, words.contact, words.contactKind, mode, cut, bgUrl, lookLabel, industry]);
 
   useEffect(() => {
     if (!doneNote) return;

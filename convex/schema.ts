@@ -11,6 +11,8 @@ export const industryValidator = v.union(
 );
 export const kindValidator = v.union(v.literal("offer"), v.literal("greeting"));
 export const marketValidator = v.union(v.literal("IN"), v.literal("US"));
+// What the contact is (see CONTACT_KINDS in industries.ts), so the ads show its icon.
+export const contactKindValidator = v.union(v.literal("instagram"), v.literal("whatsapp"), v.literal("website"));
 
 export default defineSchema({
   ...authTables,
@@ -22,6 +24,8 @@ export default defineSchema({
     phone: v.optional(v.string()),
     // Phone, website or handle shown on the ads.
     contact: v.optional(v.string()),
+    // Saved and cleared together with contact. Missing on older profiles: the ads then guess it from the text.
+    contactKind: v.optional(contactKindValidator),
     logoStorageId: v.optional(v.id("_storage")),
   }).index("by_user", ["userId"]),
   jobs: defineTable({

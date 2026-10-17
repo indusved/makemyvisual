@@ -1,7 +1,8 @@
 // Draws one offer ad (or Diwali greeting) per size on a canvas. The item (car, outfit, gift or
 // product) is never altered or generated: either the original photo (scaled, cropped or fitted)
 // or the user's own one cut out and placed on a backdrop. Offer text sits in a separate panel.
-import { BRAND, INDUSTRIES } from "../convex/industries";
+import { BRAND, INDUSTRIES, type ContactKind } from "../convex/industries";
+import { CONTACT_ICON, ICON_EDGE, ICON_SPAN, shownContact } from "./contact";
 
 export type Offer = {
   headline: string;
@@ -11,9 +12,11 @@ export type Offer = {
   message?: string;
   businessName?: string;
   contact?: string;
+  // Missing on older profiles: guessed from the contact text.
+  contactKind?: ContactKind;
 };
 
-export type Greeting = { headline: string; message?: string; businessName?: string; contact?: string };
+export type Greeting = { headline: string; message?: string; businessName?: string; contact?: string; contactKind?: ContactKind };
 
 // Cut-out item on an AI backdrop. Without a scene, the original photo is used.
 export type Scene = { background: HTMLImageElement; subject: HTMLCanvasElement };
@@ -235,6 +238,64 @@ function drawLines(ctx: CanvasRenderingContext2D, b: Lines, x: number, y: number
   return y + b.lines.length * b.lineHeight;
 }
 
+// The contact line: tidied text ("@handle", "shop.in") with its kind's icon in front. Icon height
+// and the gap after it, as shares of the font size.
+const ICON = 0.9;
+const ICON_GAP = 0.35;
+type ContactLine = { text: string; kind: ContactKind | null; size: number };
+
+// Largest font size (down to min) at which icon, gap and text fit on one line.
+function planContact(ctx: CanvasRenderingContext2D, raw: string | undefined, given: ContactKind | undefined, weight: number, maxWidth: number, maxSize: number, minSize: number): ContactLine | null {
+  const shown = shownContact(raw, given);
+  if (!shown) return null;
+  const lead = shown.kind ? ICON + ICON_GAP : 0;
+  let size = maxSize;
+  for (; size > minSize; size -= 1) {
+    setFont(ctx, weight, size);
+    if (ctx.measureText(shown.text).width + size * lead <= maxWidth) break;
+  }
+  return { ...shown, size: Math.max(size, minSize) };
+}
+
+// The icon (h tall, h wide) with its left edge at x, centred on mid, in the current fill colour.
+function drawContactIcon(ctx: CanvasRenderingContext2D, kind: ContactKind, x: number, mid: number, h: number) {
+  const icon = CONTACT_ICON[kind];
+  const k = h / ICON_SPAN;
+  ctx.save();
+  ctx.translate(x - ICON_EDGE * k, mid - 12 * k);
+  ctx.scale(k, k);
+  ctx.strokeStyle = ctx.fillStyle;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 2;
+  ctx.stroke(new Path2D(icon.lines));
+  if (icon.bold) {
+    ctx.lineWidth = 3.4;
+    ctx.stroke(new Path2D(icon.bold));
+  }
+  if (icon.dots) ctx.fill(new Path2D(icon.dots));
+  ctx.restore();
+}
+
+// Icon and text as one group starting at x ("left") or centred on it ("center"), its top at y
+// (textBaseline "top"). The icon sits on the middle of the capital letters.
+function drawContact(ctx: CanvasRenderingContext2D, c: ContactLine, weight: number, x: number, y: number, maxWidth: number, align: "left" | "center") {
+  setFont(ctx, weight, c.size);
+  const lead = c.kind ? c.size * (ICON + ICON_GAP) : 0;
+  const room = maxWidth - lead;
+  const textW = Math.min(ctx.measureText(c.text).width, room);
+  const start = align === "center" ? x - (lead + textW) / 2 : x;
+  if (c.kind) {
+    const cap = ctx.measureText("H");
+    const mid = Number.isFinite(cap.actualBoundingBoxAscent) ? y + (cap.actualBoundingBoxDescent - cap.actualBoundingBoxAscent) / 2 : y + c.size * 0.5;
+    drawContactIcon(ctx, c.kind, start, mid, c.size * ICON);
+  }
+  ctx.save();
+  ctx.textAlign = "left";
+  ctx.fillText(c.text, start + lead, y, room);
+  ctx.restore();
+}
+
 function clip(b: Lines, max: number): Lines {
   if (b.lines.length <= max) return b;
   const lines = b.lines.slice(0, Math.max(0, max));
@@ -247,7 +308,7 @@ type Panel = {
   head: Lines;
   det: Lines | null;
   pill: { text: string; size: number } | null;
-  contact: { text: string; size: number } | null;
+  contact: ContactLine | null;
   fine: Lines | null;
   // Spacing unit; shrinks along with the smaller text.
   g: number;
@@ -266,8 +327,7 @@ function planPanel(ctx: CanvasRenderingContext2D, offer: Offer, w: number, h: nu
 
   const bizText = offer.businessName?.trim().toUpperCase();
   const biz = bizText ? { text: bizText, size: fitLine(ctx, bizText, 700, innerW, Math.max(8, g * 0.3), Math.max(7, unit * 0.2), TRACKING) } : null;
-  const contactText = withContact ? offer.contact?.trim() : undefined;
-  const contact = contactText ? { text: contactText, size: fitLine(ctx, contactText, 600, innerW, Math.max(9, g * 0.36), Math.max(8, unit * 0.26)) } : null;
+  const contact = withContact ? planContact(ctx, offer.contact, offer.contactKind, 600, innerW, Math.max(9, g * 0.36), Math.max(8, unit * 0.26)) : null;
   const fine = offer.finePrint ? fit(ctx, offer.finePrint, 400, innerW, h * 0.18, Math.max(9, g * 0.32), Math.max(7, unit * 0.18)) : null;
   const pill = offer.validity?.trim() ? { text: offer.validity.trim().toUpperCase(), size: Math.max(10, g * 0.42) } : null;
 
@@ -360,8 +420,7 @@ function drawPanel(ctx: CanvasRenderingContext2D, p: Panel, x: number, y: number
   }
   if (p.contact) {
     ctx.fillStyle = COLORS.text;
-    setFont(ctx, 600, p.contact.size);
-    ctx.fillText(p.contact.text, left, base - p.contact.size * SINGLE_LINE, innerW);
+    drawContact(ctx, p.contact, 600, left, base - p.contact.size * SINGLE_LINE, innerW, "left");
   }
 }
 
@@ -825,7 +884,7 @@ function drawFramedPhoto(ctx: CanvasRenderingContext2D, img: HTMLImageElement, c
   ctx.restore();
 }
 
-type Biz = { name: Lines | null; tracking: number; contact: { text: string; size: number } | null; rule: number; height: number };
+type Biz = { name: Lines | null; tracking: number; contact: ContactLine | null; rule: number; height: number };
 
 // Business name (bold; short Latin names in spaced capitals) above the contact, under a short
 // gold rule. A name too long for one readable line wraps onto two.
@@ -843,7 +902,7 @@ function planBiz(ctx: CanvasRenderingContext2D, greeting: Greeting, maxW: number
     const width = ctx.measureText(text).width;
     name = width <= maxW ? { lines: [text], size, lineHeight: size * 1.3, widest: width } : clip(block(ctx, text, 700, min, maxW, FONT, 1.3), 2);
   }
-  const contact = contactText ? { text: contactText, size: fitLine(ctx, contactText, 500, maxW, unit * 0.31 * k, unit * 0.18) } : null;
+  const contact = planContact(ctx, contactText, greeting.contactKind, 500, maxW, unit * 0.31 * k, unit * 0.18);
   const rule = unit * 0.36 * k;
   return { name, tracking, contact, rule, height: rule + tall(name) + (contact ? contact.size * 1.3 : 0) };
 }
@@ -869,8 +928,7 @@ function drawBiz(ctx: CanvasRenderingContext2D, b: Biz, cx: number, y: number, m
   }
   if (b.contact) {
     ctx.fillStyle = tone.soft;
-    setFont(ctx, 500, b.contact.size);
-    ctx.fillText(b.contact.text, cx, cursor, maxW);
+    drawContact(ctx, b.contact, 500, cx, cursor, maxW, "center");
   }
   ctx.restore();
 }

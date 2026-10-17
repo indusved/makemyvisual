@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "../convex/_generated/api";
-import { INDUSTRIES, INDUSTRY_KEYS, type IndustryKey } from "../convex/industries";
+import { INDUSTRIES, INDUSTRY_KEYS, type ContactKind, type IndustryKey } from "../convex/industries";
 import { VerticalIcon } from "./Brand";
+import { guessContactKind, shownContact } from "./contact";
+import ContactField from "./ContactField";
 
 type Market = "IN" | "US";
-export type BusinessDetails = { market: Market; businessName: string; contact?: string };
+export type BusinessDetails = { market: Market; businessName: string; contact?: string; contactKind?: ContactKind };
 
 const INK = "#111317";
 const AMBER = "#F5B700";
@@ -189,14 +191,21 @@ export default function Onboarding({
   const [market, setMarket] = useState<Market>(initial.market);
   const [businessName, setBusinessName] = useState(initial.businessName);
   const [contact, setContact] = useState(initial.contact ?? "");
+  const [contactKind, setContactKind] = useState<ContactKind>(
+    () => initial.contactKind ?? guessContactKind(initial.contact ?? "") ?? INDUSTRIES[industry].defaultContactKind,
+  );
+  // A contact button was tapped: typing no longer switches the kind by itself.
+  const [contactPicked, setContactPicked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const editing = Boolean(onCancel);
   const greeting = purpose === "greeting" && !editing;
   const config = INDUSTRIES[industry];
   const shownOn = greeting ? "your greeting and ads" : "your greetings and ads";
+  // The kind only travels with a contact.
+  const typedContact = () => (contact.trim() ? { contact: contact.trim(), contactKind } : {});
   const changeVertical = () =>
-    onChangeVertical?.({ market, businessName: businessName.trim() ? businessName : initial.businessName, contact: contact.trim() || undefined });
+    onChangeVertical?.({ market, businessName: businessName.trim() ? businessName : initial.businessName, ...typedContact() });
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -204,7 +213,7 @@ export default function Onboarding({
     if (!businessName.trim()) return setError(`Please type your ${config.businessNoun}'s name.`);
     setBusy(true);
     try {
-      await save({ industry, market, businessName, contact: contact.trim() || undefined });
+      await save({ industry, market, businessName, ...typedContact() });
       onSaved?.();
     } catch (e) {
       setError(e instanceof ConvexError ? String(e.data) : "Couldn't save your details. Please try again.");
@@ -270,18 +279,20 @@ export default function Onboarding({
       />
       <p style={hint}>Shown on {shownOn}.</p>
 
-      <label htmlFor="contact" style={{ fontWeight: 600 }}>
-        Phone, website or Instagram <span style={{ color: MUTED, fontWeight: 400 }}>· optional</span>
-      </label>
-      <input
+      <ContactField
         id="contact"
-        value={contact}
-        onChange={(e) => setContact(e.target.value)}
-        maxLength={60}
-        placeholder={config.contactPlaceholder}
-        style={input}
+        industry={industry}
+        contact={contact}
+        kind={contactKind}
+        picked={contactPicked}
+        onContact={setContact}
+        onKind={(next, tapped) => {
+          setContactKind(next);
+          if (tapped) setContactPicked(true);
+        }}
+        inputStyle={input}
+        hintStyle={{ ...hint, marginBottom: 22 }}
       />
-      <p style={{ ...hint, marginBottom: 22 }}>Shown on {shownOn}.</p>
 
       <button type="submit" disabled={busy} style={primary(busy)}>
         {busy ? "Saving…" : editing ? "Save changes" : greeting ? "Continue to your greeting" : "Continue"}
@@ -317,7 +328,7 @@ export function ChangeVertical({
     setError(null);
     setBusy(true);
     try {
-      await save({ industry: next, market: details.market, businessName: details.businessName, contact: details.contact });
+      await save({ industry: next, market: details.market, businessName: details.businessName, contact: details.contact, contactKind: details.contactKind });
       onDone();
     } catch (e) {
       setError(e instanceof ConvexError ? String(e.data) : "Couldn't save. Please try again.");
@@ -331,7 +342,7 @@ export function ChangeVertical({
       <h2 id="change-vertical" tabIndex={-1} style={{ fontSize: 20, margin: "0 0 6px", outline: "none" }}>Change what you sell</h2>
       <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 18px" }}>
         New ads will use the new category's backgrounds and photo tips, and will show <b style={{ color: INK }}>{details.businessName}</b>
-        {details.contact && <> and {details.contact}</>}. Greetings and offers you saved for {INDUSTRIES[current].chooserLabel} are kept and show
+        {details.contact && <> and {shownContact(details.contact, details.contactKind)?.text}</>}. Greetings and offers you saved for {INDUSTRIES[current].chooserLabel} are kept and show
         again if you switch back.
       </p>
       <VerticalCards labelledBy="change-vertical" onPick={setNext} selected={next} current={current} disabled={busy} />

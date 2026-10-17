@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { INDUSTRIES, SEASON, type FieldCopy, type IndustryKey } from "../convex/industries";
+import { INDUSTRIES, SEASON, type ContactKind, type FieldCopy, type IndustryKey } from "../convex/industries";
 import type { Id } from "../convex/_generated/dataModel";
 import AdResults, { type Made, type SaveState } from "./AdResults";
 import { loadImage, type Offer } from "./adRenderer";
+import { CONTACT_LABEL, guessContactKind, shownContact } from "./contact";
+import ContactField, { ContactIcon } from "./ContactField";
 import { cutoutFromUrl, preloadCutout, startCutout, useCutoutState, type CutoutRun } from "./cutout";
 import { clearDraft, loadPhoto, loadWords, savePhoto, saveWords } from "./draft";
 import PhotoGuide, { PhotoTip } from "./PhotoGuide";
@@ -22,7 +24,7 @@ const HEADLINE_MAX = 60;
 const NAME_MAX = 60;
 
 type Kind = "offer" | "greeting";
-type Profile = { industry: IndustryKey; market: "IN" | "US"; businessName: string; contact?: string };
+type Profile = { industry: IndustryKey; market: "IN" | "US"; businessName: string; contact?: string; contactKind?: ContactKind };
 // What the results screen shows. id changes on every Make, Update and Open (one saved job per id).
 // photoKey changes only with the photo: AdResults is keyed by it, so Update keeps the chosen background.
 type MadeItem = Made & { id: number; photoKey: number; file: File | null; savedJobId?: Id<"jobs">; savedHasCutout?: boolean };
@@ -175,6 +177,11 @@ export default function NewAd({
   const [finePrint, setFinePrint] = useState(draft?.finePrint ?? "");
   const [businessName, setBusinessName] = useState(draft?.businessName ?? "");
   const [contact, setContact] = useState(draft?.contact ?? "");
+  const [contactKind, setContactKind] = useState<ContactKind>(
+    () => draft?.contactKind ?? guessContactKind(draft?.contact ?? "") ?? copy.defaultContactKind,
+  );
+  // A contact button was tapped in this tab: typing no longer switches the kind by itself.
+  const [contactPicked, setContactPicked] = useState(draft?.contactPicked ?? false);
   const [editingBusiness, setEditingBusiness] = useState(false);
   const [showExtras, setShowExtras] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -247,6 +254,8 @@ export default function NewAd({
   // The typed name while the inputs show (or no profile is loaded yet), otherwise the saved one, live.
   const nameForVisual = showBusinessInputs || !profile ? businessName.trim() : profile.businessName;
   const contactForVisual = showBusinessInputs || !profile ? contact.trim() : profile.contact ?? "";
+  // Older profiles have no kind: the renderer guesses it from the text.
+  const kindForVisual = showBusinessInputs || !profile ? contactKind : profile.contactKind;
   const draftMade = made !== null && made.savedJobId === undefined;
   const madeUrl = made?.photoUrl ?? null;
 
@@ -314,8 +323,8 @@ export default function NewAd({
 
   useEffect(() => {
     if (!loaded || restoreMake) return;
-    saveWords(industry, { kind, line, ownLine, message, headline, details, validity, finePrint, businessName, contact, made: draftMade });
-  }, [loaded, restoreMake, industry, kind, line, ownLine, message, headline, details, validity, finePrint, businessName, contact, draftMade]);
+    saveWords(industry, { kind, line, ownLine, message, headline, details, validity, finePrint, businessName, contact, contactKind, contactPicked, made: draftMade });
+  }, [loaded, restoreMake, industry, kind, line, ownLine, message, headline, details, validity, finePrint, businessName, contact, contactKind, contactPicked, draftMade]);
 
   // Guest → signed in (not the first load) with results on screen: save them once.
   useEffect(() => {
@@ -367,6 +376,7 @@ export default function NewAd({
     if (profile) {
       setBusinessName(profile.businessName);
       setContact(profile.contact ?? "");
+      setContactKind(profile.contactKind ?? guessContactKind(profile.contact ?? "") ?? copy.defaultContactKind);
     }
     setEditingBusiness(true);
     requestAnimationFrame(() => (field === "name" ? nameRef : contactRef).current?.focus());
@@ -459,6 +469,7 @@ export default function NewAd({
       finePrint: greeting ? undefined : finePrint.trim() || undefined,
       businessName: nameForVisual,
       contact: contactForVisual || undefined,
+      contactKind: contactForVisual ? kindForVisual : undefined,
     };
     let cutRun = photo.file ? photo.run : null;
     if (photo.file && !cutRun) {
@@ -603,6 +614,7 @@ export default function NewAd({
             market: profile?.market ?? defaultMarket(),
             businessName: m.words.businessName ?? "",
             contact: m.words.contact,
+            contactKind: m.words.contactKind,
           });
           if (saved.industry !== industry) {
             // Set up for another vertical: the page is moving there, so nothing is filed here.
@@ -667,6 +679,7 @@ export default function NewAd({
         finePrint: job.finePrint,
         businessName: profile?.businessName,
         contact: profile?.contact,
+        contactKind: profile?.contactKind,
       },
       photoUrl: job.photoUrl,
       cutout: cutRun,
@@ -729,29 +742,43 @@ export default function NewAd({
           style={input}
         />
         <p id="biz-name-hint" style={hint}>Goes at the bottom of your {greeting ? "greeting" : "ads"}.</p>
-        <label htmlFor="biz-contact">
-          Phone, website or Instagram <span style={{ color: MUTED }}>· optional</span>
-        </label>
-        <input
+        <ContactField
           id="biz-contact"
-          ref={contactRef}
-          value={contact}
-          onChange={(e) => setContact(e.target.value)}
-          maxLength={NAME_MAX}
-          placeholder={`e.g. ${copy.contactPlaceholder}`}
-          style={input}
+          industry={industry}
+          contact={contact}
+          kind={contactKind}
+          picked={contactPicked}
+          onContact={setContact}
+          onKind={(next, tapped) => {
+            setContactKind(next);
+            if (tapped) setContactPicked(true);
+          }}
+          inputRef={contactRef}
+          inputStyle={input}
+          hintStyle={hint}
         />
       </>
     );
   } else if (accountKnown && profile) {
+    const saved = shownContact(profile.contact, profile.contactKind);
     businessBlock = (
       <div style={{ border: `1px solid ${GOLD}`, background: "#FDF6E7", borderRadius: 10, padding: "10px 14px", fontSize: 15, lineHeight: 1.4, margin: "0 0 16px", display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 10 }}>
         <span style={{ flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere" }}>
           From <b>{profile.businessName}</b>
-          {profile.contact ? ` · ${profile.contact}` : ""}
+          {saved && (
+            <>
+              {" · "}
+              {/* The icon is glued to the first letter, so it never ends a line on its own. */}
+              <span style={{ whiteSpace: "nowrap" }}>
+                {saved.kind && <><ContactIcon kind={saved.kind} size={16} label={CONTACT_LABEL[saved.kind]} />{"\u00a0"}</>}
+                {Array.from(saved.text)[0]}
+              </span>
+              {Array.from(saved.text).slice(1).join("")}
+            </>
+          )}
         </span>
-        <button type="button" onClick={() => openBusinessEditor(profile.contact ? "name" : "contact")} style={linkButton}>
-          {profile.contact ? "Change" : "Add phone or website"}
+        <button type="button" onClick={() => openBusinessEditor(saved ? "name" : "contact")} style={linkButton}>
+          {saved ? "Change" : "Add Instagram, WhatsApp or website"}
         </button>
       </div>
     );

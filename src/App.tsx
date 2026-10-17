@@ -435,7 +435,7 @@ function VerticalPage({
           </p>
           <Onboarding
             industry={profile.industry}
-            initial={{ market: profile.market, businessName: profile.businessName, contact: profile.contact }}
+            initial={{ market: profile.market, businessName: profile.businessName, contact: profile.contact, contactKind: profile.contactKind }}
             onCancel={() => setMode("ads")}
             onSaved={() => setMode("ads")}
             onChangeVertical={(typed) => {
@@ -449,7 +449,7 @@ function VerticalPage({
       {profile && view === "change" && (
         <ChangeVertical
           current={profile.industry}
-          details={draft ?? { market: profile.market, businessName: profile.businessName, contact: profile.contact }}
+          details={draft ?? { market: profile.market, businessName: profile.businessName, contact: profile.contact, contactKind: profile.contactKind }}
           onCancel={() => {
             switchingFrom.current = null;
             setMode("edit");

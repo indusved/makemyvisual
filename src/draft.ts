@@ -1,4 +1,4 @@
-import type { IndustryKey } from "../convex/industries";
+import { CONTACT_KINDS, type ContactKind, type IndustryKey } from "../convex/industries";
 
 // Best-effort copy of the maker's form, so a phone that reloads the tab while the person is in
 // their email app (getting the sign-in code) comes back to the same words, photo and results.
@@ -16,6 +16,10 @@ export type DraftWords = {
   finePrint: string;
   businessName: string;
   contact: string;
+  // Missing in drafts saved before contact kinds: the form then starts from the vertical's default.
+  contactKind?: ContactKind;
+  // A contact button was tapped, so typing no longer switches the kind by itself.
+  contactPicked?: boolean;
   // The words were made into a visual, so a reload shows the results again.
   made: boolean;
 };
@@ -40,6 +44,8 @@ export function loadWords(industry: IndustryKey): DraftWords | null {
       finePrint: text(w.finePrint),
       businessName: text(w.businessName),
       contact: text(w.contact),
+      contactKind: CONTACT_KINDS.find((k) => k === w.contactKind),
+      contactPicked: w.contactPicked === true,
       made: w.made === true,
     };
   } catch {

@@ -11,11 +11,11 @@
 | Event | GrowthX Build Sprint · Season 04 |
 | Builder | Inder, solo, plus Claude Code |
 | Build starts | Fri 2 Oct 2026, 11:00 AM IST |
-| Submission deadline | Sat 17 Oct 2026, 11:00 AM IST (aim for 9:00 AM) |
-| Current milestone | M1 (M0 riskiest-assumption test still open) |
+| Submission deadline | **Sun 18 Oct 2026, 11:00 AM IST** (moved one day; was Sat 17 Oct) — aim for 9:00 AM |
+| Current milestone | M6 — verify and submit (riskiest-assumption test still not run) |
 | Live URL | https://chatty-cricket-187.convex.site |
 | Public repo | https://github.com/indusved/makemyvisual |
-| Last updated | Fri 2 Oct 2026 |
+| Last updated | Sat 17 Oct 2026 |
 
 ### status language
 
@@ -472,29 +472,40 @@ Any change to these requires a written scope decision in section 15.
 | Direct posting to Meta | Saves a step | Integration risk | Sat 17 Oct |
 | Video / reels | Higher engagement | Too heavy for the sprint | Sat 17 Oct |
 | Per-ad custom AI background (dealer types a scene) | More variety | Slow (20–60 s) and paid per ad; presets cover v1 | Sat 17 Oct |
+| Visual website + onboarding sequence (references researched Tue 6 Oct, see JOB_FLOW.md) | Better first impression on the home page | Builder chose "onboarding live first, website after the calls" (Tue 6 Oct) | After submission |
 | Visual website + onboarding sequence (references researched Tue 6 Oct, in JOB_FLOW.md research) | Better first impression on the home page | Feature freeze until Fri 9 Oct; builder chose "onboarding live first, website after the calls" (Tue 6 Oct) | After the Wed 7 Oct calls |
 
 ## 14. current state
 
 ### active milestone
 
-M2 — first users (Mon 5 → Wed 7 Oct), under the **focus reset** (see decision log, Mon 5 Oct): feature freeze until Fri 9 Oct except one ease-of-use pass by end of Tue 6 Oct.
+M6 — verify and submit, by Sun 18 Oct 11:00 AM IST (aim 9:00 AM). Outreach goes out Sat 17 Oct around 11 AM.
 
 ### implemented / live
 
-- Live at https://chatty-cricket-187.convex.site, reached via makemyvisual.com and makemyvisual.com/{gifting, fashion, skincare, cars} (https).
-- Four separate verticals (Cars, Fashion, Gifting, Skincare & beauty), each with its own setup, photo guide, backgrounds and wording.
-- Offer ads (5 sizes) and Diwali greetings (5 formats incl. 4×6 print card), real item cut out and placed, never AI-drawn; Share via phone share sheet.
-- Email-code sign-in from hello@makemyvisual.com; business profile on every ad.
-- Outreach messages for all four groups: Claude Doc "MakeMyVisual outreach messages".
+- Live at https://chatty-cricket-187.convex.site, reached via makemyvisual.com and makemyvisual.com/{gifting, fashion, skincare, cars} (https). Gifting, fashion and skincare links open on the Diwali greeting; cars opens on offer ads.
+- **Preview before sign-in (live Sat 17 Oct):** a visitor picks a category, types a business name (photo optional) and sees the finished greeting or ads with no account. Email + 6-digit code only when they tap Share, Download or Save all; the business and the visual are saved right after the code. Words and photo survive a reload while they fetch the code.
+- Four separate verticals (Cars, Fashion, Gifting, Skincare & beauty), each with its own photo guide, backgrounds and wording.
+- Offer ads (5 sizes) and Diwali greetings (5 formats incl. 4×6 print card); real item cut out in the browser and placed, never AI-drawn; Share via the phone share sheet.
+- Email-code sign-in from hello@makemyvisual.com.
+- Contact type buttons (Instagram · WhatsApp · Website) with a matching icon on greetings and ads (live Sat 17 Oct; checked on the live greeting at phone width).
+- Public repo matches the live code (pushed Sat 17 Oct).
+- Outreach messages for all four groups (Claude Doc "MakeMyVisual outreach messages"); gifting, fashion and skincare lead with the greeting to match the live links.
+- Write-up drafts (right to win, why now, moat, SOM): Claude Doc "MakeMyVisual sprint write-ups" (in progress).
 
 ### verified
 
-- See the dated notes earlier in this file; all core flows verified locally and deployed. Not yet verified: Share on a real phone, Hindi on Android/Windows, signed-out live pages in a private window.
+- Sat 17 Oct, live site at phone width (375×812), fresh tab with no stored data: home → Make a Diwali greeting → Gifting → name → Make my greeting showed the greeting with the name and no sign-in; Download opened the email step and downloaded nothing; live database unchanged (nothing saved for guests).
+- Sat 17 Oct, builder's phone on the live site: code typed → business saved (Gifting, "HootByte", @hootbyte) and greeting saved (status done); Share counted (downloads 2). Builder's own account — excluded from signups.
+- Not yet verified: adding a photo on the live greeting/offer flow (browser pane can't pick files), Hindi on Android/Windows, a stranger finishing unassisted on their own phone.
 
 ### not done (the rows that score)
 
-- Real users: 0. Conversations logged: 0. Riskiest-assumption test: never run. Payment: not built.
+- Real signups: 0 (builder's accounts excluded). Conversations logged: 0. Riskiest-assumption test: never run. Payment: not built. Waitlist: not built (skipped in favour of signups).
+
+### in progress
+
+- Premium-minimal UI refresh and animated photo guides per category — requested Sat 17 Oct; design plan being drafted; goes live only after the same live check passes (aim: Sat evening).
 
 ### current blocker
 
@@ -502,7 +513,7 @@ None technical. The gap is users.
 
 ### next single action
 
-Finish the ease-of-use pass (by end of Tue 6 Oct), then send the outreach messages and book three 10-minute calls.
+Send the outreach messages around 11 AM Sat 17 Oct; write down every reply with date and quote; prepare the submission package (screenshots, 2-minute recording, write-ups, self-score) by 9 AM Sun 18 Oct.
 
 ## 15. decision log
 
@@ -530,3 +541,7 @@ Finish the ease-of-use pass (by end of Tue 6 Oct), then send the outreach messag
 | Mon 5 Oct | **Rescope: D2C brands added alongside car dealers** (links `/cars` and `/d2c`; business profile picks the industry) | Builder expects reaching 3 dealers this week to be hard and can reach D2C brands faster | First three users may now be D2C brands — **gifting packages and fashion** (stated Mon 5 Oct). D2C backgrounds tuned for them (7: Clean studio, Festive glow, Red & gold gifting, Marble, Wooden table, Soft linen, Boutique wall); photo tips to say "hang clothes or use a mannequin, don't lay flat" |
 | Mon 5 Oct | Photo guidance: do/avoid illustrations per industry, take-photo vs gallery buttons, instant photo checks (small, dark, blurry), cut-off warning after cutout | Users don't know how to shoot a usable photo; bad photos are the main cause of bad cutouts | Non-blocking warnings only |
 | Fri 2 Oct | **Revised:** India + US in v1 | Builder is already in conversation with US dealers; USD payments can reach Revenue L3 | INR + USD payments; US fine-print field; English-only for US |
+| Tue 6 Oct | Offer ads as the default on all four links, with brand backgrounds first and Diwali as a tagged theme; home page leading with offer ads | Builder: "Diwali is a theme that we can offer but the default brand themes should exist as the default" | **Built but not live.** Held back Sat 17 Oct (set aside in git stash "offer-default") because the builder asked not to change other screens while putting the preview-before-sign-in flow live. Revisit after submission |
+| Sat 17 Oct | Submission moved one day to Sun 18 Oct, 11:00 AM IST | Builder | Extra day goes to outreach and the submission package, not features |
+| Sat 17 Oct | Preview-before-sign-in deployed to live; outreach messages for gifting, fashion and skincare lead with the Diwali greeting again, to match where those links open | Builder asked that a visitor sees their own greeting before giving an email; greeting needs no photo, so it is the fastest first use for signups in one day | `npm run deploy` stops at a yes/no prompt in non-interactive shells, so deploys run `npx convex deploy -y` + `npx @convex-dev/static-hosting upload --build --prod` |
+| Sat 17 Oct | Contact type buttons (Instagram · WhatsApp · Website) with a matching icon on the visual | Builder: "it should be made clear which handle / social ID they are adding" | Optional `contactKind` on businessProfiles; old profiles keep working (kind guessed from the text) |
