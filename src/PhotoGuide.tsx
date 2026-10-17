@@ -1,23 +1,18 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { INDUSTRIES, type IndustryKey } from "../convex/industries";
+import { Icon, VerdictDot, type IconName } from "./Icons";
+import { art, color, prefersReducedMotion, text } from "./theme";
 
-const INK = "#111317";
-const GREY = "#8a8f99";
-const AMBER = "#F5B700";
-const MUTED = "#5b6170";
-const PAPER = "#f4f5f7";
-const NIGHT = "#1d2025";
-const RED = "#d93025";
-const GREEN = "#1e8e3e";
-// Darker green for small text, so it stays readable (about 6:1 on white).
-const GREEN_TEXT = "#137333";
+// The guide opens and plays by itself the first time someone visits each category (Decision 1).
+// Set to false to keep it closed until tapped.
+const GUIDE_AUTO_OPEN_FIRST_VISIT = true;
 
 // "shade" draws a shape as a flat silhouette, for the hard shadow a flash throws behind it.
 type Tone = "ink" | "muted" | "dim" | "shade";
 const SHADE = "#121418";
 const TONES: Record<Tone, { line: string; soft: string; fill: string; glass: string; lamp: string; shadow: string }> = {
-  ink: { line: INK, soft: GREY, fill: "#fff", glass: "#e6e9ee", lamp: AMBER, shadow: "#e2e5ea" },
-  muted: { line: "#b4b8c0", soft: "#c9ccd2", fill: "#fbfbfc", glass: "#f0f1f4", lamp: "#e3e5e9", shadow: "transparent" },
+  ink: { line: color.ink, soft: art.grey, fill: "#fff", glass: art.inkGlass, lamp: color.accent, shadow: art.inkShadow },
+  muted: { line: art.mutedLine, soft: art.mutedSoft, fill: art.mutedFill, glass: art.mutedGlass, lamp: art.mutedLamp, shadow: "transparent" },
   dim: { line: "#4d525c", soft: "#3b3f47", fill: "#262a30", glass: "#2e3238", lamp: "#5a5032", shadow: "#16181c" },
   shade: { line: SHADE, soft: SHADE, fill: SHADE, glass: SHADE, lamp: SHADE, shadow: "transparent" },
 };
@@ -124,9 +119,22 @@ function Jar({ tone = "ink" }: { tone?: Tone }) {
   );
 }
 
+// One path per corner, each measured as length 1, so in the guide all four trace themselves at once
+// (one path with four pieces would trace them one after another in some browsers and together in others).
 function Corners({ x, y, w, h, len = 14 }: { x: number; y: number; w: number; h: number; len?: number }) {
-  const d = `M${x} ${y + len}V${y}H${x + len}M${x + w - len} ${y}H${x + w}V${y + len}M${x + w} ${y + h - len}V${y + h}H${x + w - len}M${x + len} ${y + h}H${x}V${y + h - len}`;
-  return <path d={d} fill="none" stroke={AMBER} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />;
+  const corners = [
+    `M${x} ${y + len}V${y}H${x + len}`,
+    `M${x + w - len} ${y}H${x + w}V${y + len}`,
+    `M${x + w} ${y + h - len}V${y + h}H${x + w - len}`,
+    `M${x + len} ${y + h}H${x}V${y + h - len}`,
+  ];
+  return (
+    <g fill="none" stroke={color.accent} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      {corners.map((d) => (
+        <path key={d} className="pg-corners" pathLength={1} d={d} />
+      ))}
+    </g>
+  );
 }
 
 function Phone({ x, y, tone = "ink" }: { x: number; y: number; tone?: Tone }) {
@@ -146,22 +154,23 @@ function PhoneDown({ cx }: { cx: number }) {
       <g transform={`translate(${cx - 6.5} 4) rotate(90 6.5 11)`}>
         <Phone x={0} y={0} />
       </g>
-      <path d={`M${cx} 24 V36 M${cx - 5} 31 L${cx} 37 L${cx + 5} 31`} fill="none" stroke={AMBER} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={`M${cx} 24 V36 M${cx - 5} 31 L${cx} 37 L${cx + 5} 31`} fill="none" stroke={color.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </>
   );
 }
 
 function Frame({ label, w, h, dark, children }: { label: string; w: number; h: number; dark?: boolean; children: ReactNode }) {
   const clip = `pg${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  // --pg-r lets a parent round the drawing more tightly (the 64×40 still on the closed card).
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} style={{ display: "block", width: "100%", height: "auto", borderRadius: 10 }}>
+    <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} style={{ display: "block", width: "100%", height: "auto", borderRadius: "var(--pg-r, 10px)" }}>
       <defs>
         <clipPath id={clip}>
           <rect width={w} height={h} rx="10" />
         </clipPath>
       </defs>
       <g clipPath={`url(#${clip})`}>
-        <rect width={w} height={h} fill={dark ? NIGHT : PAPER} />
+        <rect width={w} height={h} fill={dark ? art.night : art.stage} />
         {children}
       </g>
     </svg>
@@ -172,19 +181,24 @@ type ArtProps = { label: string };
 
 const CarGood = ({ label }: ArtProps) => (
   <Frame label={label} w={320} h={200}>
-    <path d="M0 168 H320" stroke={GREY} strokeWidth="1.5" />
-    <path d="M27 128 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
-    <g transform="translate(52 68)">
+    <path d="M0 168 H320" stroke={art.grey} strokeWidth="1.5" />
+    <g className="pg-line">
+      <path d="M27 128 H300" stroke={color.accent} strokeWidth="2" strokeDasharray="5 5" />
+    </g>
+    <g transform="translate(34 68)">
       <Car />
     </g>
-    <Phone x={10} y={117} />
-    <Corners x={38} y={46} w={252} h={136} />
+    <g className="pg-phone">
+      <Phone x={10} y={117} />
+    </g>
+    {/* Kept clear of the guide's "Like this" pill (top left) and play control (bottom right), down to 320px screens. */}
+    <Corners x={28} y={62} w={236} h={120} />
   </Frame>
 );
 
 const CarCropped = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <path d="M0 112 H160" stroke={GREY} strokeWidth="1.5" />
+    <path d="M0 112 H160" stroke={art.grey} strokeWidth="1.5" />
     <g transform="translate(-52 30) scale(0.98)">
       <Car />
     </g>
@@ -196,33 +210,33 @@ const CarAbove = ({ label }: ArtProps) => (
     <g strokeLinejoin="round" strokeLinecap="round">
       <ellipse cx="82" cy="74" rx="62" ry="32" fill={TONES.ink.shadow} />
       {[[38, 42], [104, 42], [38, 94], [104, 94]].map(([x, y]) => (
-        <rect key={`${x}-${y}`} x={x} y={y} width="18" height="9" rx="3" fill={INK} />
+        <rect key={`${x}-${y}`} x={x} y={y} width="18" height="9" rx="3" fill={color.ink} />
       ))}
-      <rect x="22" y="46" width="116" height="52" rx="18" fill="#fff" stroke={INK} strokeWidth="2.5" />
-      <path d="M46 52 L60 58 V86 L46 92 Z M106 58 L118 54 V90 L106 86 Z" fill={TONES.ink.glass} stroke={INK} strokeWidth="2" />
-      <rect x="62" y="56" width="42" height="32" rx="4" fill="#fff" stroke={INK} strokeWidth="2" />
-      <path d="M57 46 L52 40 M57 98 L52 104" stroke={INK} strokeWidth="2.5" />
-      <rect x="24" y="52" width="5" height="9" rx="2" fill={AMBER} />
-      <rect x="24" y="83" width="5" height="9" rx="2" fill={AMBER} />
+      <rect x="22" y="46" width="116" height="52" rx="18" fill="#fff" stroke={color.ink} strokeWidth="2.5" />
+      <path d="M46 52 L60 58 V86 L46 92 Z M106 58 L118 54 V90 L106 86 Z" fill={TONES.ink.glass} stroke={color.ink} strokeWidth="2" />
+      <rect x="62" y="56" width="42" height="32" rx="4" fill="#fff" stroke={color.ink} strokeWidth="2" />
+      <path d="M57 46 L52 40 M57 98 L52 104" stroke={color.ink} strokeWidth="2.5" />
+      <rect x="24" y="52" width="5" height="9" rx="2" fill={color.accent} />
+      <rect x="24" y="83" width="5" height="9" rx="2" fill={color.accent} />
     </g>
     <g transform="translate(76 4) rotate(90 6.5 11)">
       <Phone x={0} y={0} />
     </g>
-    <path d="M82 24 V36 M77 31 L82 37 L87 31" fill="none" stroke={AMBER} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M82 24 V36 M77 31 L82 37 L87 31" fill="none" stroke={color.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
   </Frame>
 );
 
 const CarCluttered = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <path d="M0 101 H160" stroke={GREY} strokeWidth="1.5" />
+    <path d="M0 101 H160" stroke={art.grey} strokeWidth="1.5" />
     <g transform="translate(74 52) scale(0.42)">
       <Car tone="muted" />
     </g>
-    <path d="M140 18 V101" stroke={GREY} strokeWidth="3" strokeLinecap="round" />
+    <path d="M140 18 V101" stroke={art.grey} strokeWidth="3" strokeLinecap="round" />
     <g transform="translate(12 46) scale(0.55)">
       <Car />
     </g>
-    <g stroke={INK} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
+    <g stroke={color.ink} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
       <path d="M40 101 V84 Q40 74 50 74 H54 Q64 74 64 84 V101" />
       <circle cx="52" cy="66" r="7" />
     </g>
@@ -239,8 +253,6 @@ const CarDark = ({ label }: ArtProps) => (
   </Frame>
 );
 
-const TABLE = "#e9ecf0";
-const TABLE_SHADOW = "#dde1e7";
 const DIM_TABLE = "#23262b";
 const DIM_EDGE = "#33373f";
 
@@ -249,11 +261,11 @@ const DIM_EDGE = "#33373f";
 function HeroTable() {
   return (
     <>
-      <path d="M0 190 H320" stroke={GREY} strokeWidth="1.5" />
-      <g stroke={INK} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M260 150 V182" stroke={GREY} />
+      <path d="M0 190 H320" stroke={art.grey} strokeWidth="1.5" />
+      <g stroke={color.ink} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M260 150 V182" stroke={art.grey} />
         <path d="M94 166 V190 M222 166 V190" />
-        <path d="M84 158 L120 136 H268 L232 158 Z" fill={TABLE} />
+        <path d="M84 158 L120 136 H268 L232 158 Z" fill={art.table} />
         <path d="M84 158 H232 V166 H84 Z M232 158 L268 136 V144 L232 166 Z" fill="#fff" />
       </g>
     </>
@@ -273,13 +285,18 @@ function Glare({ x, y }: { x: number; y: number }) {
 
 const FashionGood = ({ label }: ArtProps) => (
   <Frame label={label} w={320} h={200}>
-    <path d="M0 190 H320" stroke={GREY} strokeWidth="1.5" />
-    <path d="M27 96 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
-    <g transform="translate(110 22) scale(1.3)">
+    <path d="M0 190 H320" stroke={art.grey} strokeWidth="1.5" />
+    <g className="pg-line">
+      <path d="M27 96 H300" stroke={color.accent} strokeWidth="2" strokeDasharray="5 5" />
+    </g>
+    <g transform="translate(140 32) scale(1.2)">
       <HangingShirt />
     </g>
-    <Phone x={10} y={85} />
-    <Corners x={92} y={14} w={166} h={170} />
+    <g className="pg-phone">
+      <Phone x={10} y={85} />
+    </g>
+    {/* Like CarGood: clear of the "Like this" pill, the progress bars and the play control, down to 320px screens. */}
+    <Corners x={136} y={24} w={128} h={160} />
   </Frame>
 );
 
@@ -294,17 +311,17 @@ const FashionCropped = ({ label }: ArtProps) => (
 const FashionAbove = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
     <rect width="160" height="120" fill="#e3e6eb" />
-    <rect width="160" height="5" fill={GREY} />
+    <rect width="160" height="5" fill={art.grey} />
     <path d="M10 74 Q22 66 32 78 M120 110 Q134 102 152 108 M128 46 Q140 52 152 48" fill="none" stroke="#cdd1d8" strokeWidth="1.5" strokeLinecap="round" />
     <g strokeLinejoin="round" strokeLinecap="round">
-      <path d="M11 13 Q34 8 57 13 Q62 25 57 37 Q34 42 11 37 Q6 25 11 13 Z" fill="#fff" stroke={INK} strokeWidth="2" />
-      <path d="M17 25 Q34 21 51 25" fill="none" stroke={GREY} strokeWidth="1.5" />
+      <path d="M11 13 Q34 8 57 13 Q62 25 57 37 Q34 42 11 37 Q6 25 11 13 Z" fill="#fff" stroke={color.ink} strokeWidth="2" />
+      <path d="M17 25 Q34 21 51 25" fill="none" stroke={art.grey} strokeWidth="1.5" />
       <g transform="translate(46 36) scale(0.8)">
-        <path d="M42 4 L28 9 L6 30 L16 42 L30 30 V98 H70 V30 L84 42 L94 30 L72 9 L58 4 Q50 10 42 4 Z" fill="#fff" stroke={INK} strokeWidth="2.5" />
-        <path d="M30 30 L27 12 M70 30 L73 12 M50 15 V98" fill="none" stroke={GREY} strokeWidth="2" />
-        <path d="M42 4 L50 15 L43 20 L37 6.5 Z M58 4 L50 15 L57 20 L63 6.5 Z" fill={TONES.ink.glass} stroke={INK} strokeWidth="2" />
+        <path d="M42 4 L28 9 L6 30 L16 42 L30 30 V98 H70 V30 L84 42 L94 30 L72 9 L58 4 Q50 10 42 4 Z" fill="#fff" stroke={color.ink} strokeWidth="2.5" />
+        <path d="M30 30 L27 12 M70 30 L73 12 M50 15 V98" fill="none" stroke={art.grey} strokeWidth="2" />
+        <path d="M42 4 L50 15 L43 20 L37 6.5 Z M58 4 L50 15 L57 20 L63 6.5 Z" fill={TONES.ink.glass} stroke={color.ink} strokeWidth="2" />
         {[32, 50, 68, 86].map((y) => (
-          <circle key={y} cx="50" cy={y} r="2" fill={INK} />
+          <circle key={y} cx="50" cy={y} r="2" fill={color.ink} />
         ))}
       </g>
     </g>
@@ -315,7 +332,7 @@ const FashionAbove = ({ label }: ArtProps) => (
 // Other clothes on the same rail, and a person beside it. Hooks sit on the rail at y=16.
 const FashionCluttered = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <path d="M-2 16 H162" stroke={GREY} strokeWidth="3" />
+    <path d="M-2 16 H162" stroke={art.grey} strokeWidth="3" />
     {[-34, -2].map((x) => (
       <g key={x} transform={`translate(${x} 10.4) scale(0.7)`}>
         <HangingShirt tone="muted" />
@@ -324,7 +341,7 @@ const FashionCluttered = ({ label }: ArtProps) => (
     <g transform="translate(32 10.4) scale(0.7)">
       <HangingShirt />
     </g>
-    <g stroke={INK} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
+    <g stroke={color.ink} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
       <path d="M94 120 V86 Q94 68 111 68 H115 Q132 68 132 86 V120" />
       <circle cx="113" cy="55" r="9" />
     </g>
@@ -348,19 +365,24 @@ const FashionDark = ({ label }: ArtProps) => (
 const GiftGood = ({ label }: ArtProps) => (
   <Frame label={label} w={320} h={200}>
     <HeroTable />
-    <path d="M27 109 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
+    <g className="pg-line">
+      <path d="M27 109 H300" stroke={color.accent} strokeWidth="2" strokeDasharray="5 5" />
+    </g>
     <g transform="translate(127 52) scale(0.95)">
       <GiftBox />
     </g>
-    <Phone x={10} y={98} />
-    <Corners x={114} y={46} w={114} h={109} len={12} />
+    <g className="pg-phone">
+      <Phone x={10} y={98} />
+    </g>
+    {/* Starts below the "Like this" pill at 320px; the bow top is at about y=64. */}
+    <Corners x={114} y={61} w={114} h={94} len={12} />
   </Frame>
 );
 
 const GiftCropped = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <rect y="108" width="160" height="12" fill={TABLE} />
-    <path d="M0 108 H160" stroke={GREY} strokeWidth="1.5" />
+    <rect y="108" width="160" height="12" fill={art.table} />
+    <path d="M0 108 H160" stroke={art.grey} strokeWidth="1.5" />
     <g transform="translate(-30 -22) scale(1.3)">
       <GiftBox />
     </g>
@@ -370,15 +392,15 @@ const GiftCropped = ({ label }: ArtProps) => (
 // Seen from high up: mostly the lid (far edge narrower), with a thin strip of the front showing.
 const GiftAbove = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <rect width="160" height="120" fill={TABLE} />
-    <g stroke={INK} strokeLinejoin="round" strokeLinecap="round">
-      <ellipse cx="84" cy="112" rx="46" ry="5" fill={TABLE_SHADOW} stroke="none" />
+    <rect width="160" height="120" fill={art.table} />
+    <g stroke={color.ink} strokeLinejoin="round" strokeLinecap="round">
+      <ellipse cx="84" cy="112" rx="46" ry="5" fill={art.tableShadow} stroke="none" />
       <rect x="47" y="103" width="70" height="8" fill="#fff" strokeWidth="2.5" />
       <rect x="43" y="96" width="78" height="8" fill="#fff" strokeWidth="2.5" />
       <path d="M49 43 H115 L121 96 H43 Z" fill="#fff" strokeWidth="2.5" />
-      <path d="M46.6 64 H117.4 L118.7 76 H45.3 Z M77 43 H87 L88 96 H76 Z M76 96 H88 V104 H76 Z M76 103 H88 V111 H76 Z" fill={AMBER} strokeWidth="1.8" />
-      <path d="M82 70 C70 55 55 61 61 73 C65 81 76 77 82 70 Z M82 70 C94 55 109 61 103 73 C99 81 88 77 82 70 Z" fill={AMBER} strokeWidth="2" />
-      <ellipse cx="82" cy="70" rx="5" ry="4" fill={AMBER} strokeWidth="2" />
+      <path d="M46.6 64 H117.4 L118.7 76 H45.3 Z M77 43 H87 L88 96 H76 Z M76 96 H88 V104 H76 Z M76 103 H88 V111 H76 Z" fill={color.accent} strokeWidth="1.8" />
+      <path d="M82 70 C70 55 55 61 61 73 C65 81 76 77 82 70 Z M82 70 C94 55 109 61 103 73 C99 81 88 77 82 70 Z" fill={color.accent} strokeWidth="2" />
+      <ellipse cx="82" cy="70" rx="5" ry="4" fill={color.accent} strokeWidth="2" />
     </g>
     <PhoneDown cx={82} />
   </Frame>
@@ -390,13 +412,13 @@ const GiftCluttered = ({ label }: ArtProps) => (
       {[
         [4, 18, "#c9ccd2"], [12, 22, "#e3e5e9"], [20, 14, "#b4b8c0"], [28, 20, "#d3d6dc"], [36, 24, "#c9ccd2"], [44, 16, "#e3e5e9"],
       ].map(([x, h, c]) => (
-        <rect key={x} x={x as number} y={40 - (h as number)} width="7" height={h as number} fill={c as string} stroke={GREY} strokeWidth="1" />
+        <rect key={x} x={x as number} y={40 - (h as number)} width="7" height={h as number} fill={c as string} stroke={art.grey} strokeWidth="1" />
       ))}
-      <path d="M0 40 H160" stroke={GREY} strokeWidth="3" />
-      {/* Plant shifted left so the ✕ badge sits on empty wall. */}
+      <path d="M0 40 H160" stroke={art.grey} strokeWidth="3" />
+      {/* Plant shifted left so the red x badge sits on empty wall. */}
       <g transform="translate(-34 0)">
-        <path d="M108 40 L111 30 H125 L128 40 Z" fill="#fff" stroke={GREY} strokeWidth="1.5" />
-        <g stroke={GREEN} strokeWidth="1.8" fill="#cfe6d5">
+        <path d="M108 40 L111 30 H125 L128 40 Z" fill="#fff" stroke={art.grey} strokeWidth="1.5" />
+        <g stroke={color.success} strokeWidth="1.8" fill="#cfe6d5">
           <path d="M118 30 Q112 18 104 14 Q114 14 118 30 Z M118 30 Q122 16 130 12 Q128 24 118 30 Z" />
         </g>
       </g>
@@ -404,7 +426,7 @@ const GiftCluttered = ({ label }: ArtProps) => (
     <g transform="translate(44 38) scale(0.72)">
       <GiftBox />
     </g>
-    <g stroke={INK} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
+    <g stroke={color.ink} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
       <path d="M0 74 H28 Q40 74 40 85 V91 Q40 102 28 102 H0" />
       {[76, 82.5, 89, 95.5].map((y) => (
         <rect key={`l${y}`} x="38" y={y} width="20" height="6.5" rx="3.25" />
@@ -436,19 +458,24 @@ const GiftDark = ({ label }: ArtProps) => (
 const SkinGood = ({ label }: ArtProps) => (
   <Frame label={label} w={320} h={200}>
     <HeroTable />
-    <path d="M27 100 H300" stroke={AMBER} strokeWidth="2" strokeDasharray="5 5" />
+    <g className="pg-line">
+      <path d="M27 100 H300" stroke={color.accent} strokeWidth="2" strokeDasharray="5 5" />
+    </g>
     <g transform="translate(146.5 37) scale(1.1)">
       <Serum />
     </g>
-    <Phone x={10} y={89} />
-    <Corners x={130} y={28} w={88} h={127} len={12} />
+    <g className="pg-phone">
+      <Phone x={10} y={89} />
+    </g>
+    {/* Starts right of the "Like this" pill at 320px. */}
+    <Corners x={138} y={28} w={80} h={127} len={12} />
   </Frame>
 );
 
 const SkinCropped = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <rect y="100" width="160" height="20" fill={TABLE} />
-    <path d="M0 100 H160" stroke={GREY} strokeWidth="1.5" />
+    <rect y="100" width="160" height="20" fill={art.table} />
+    <path d="M0 100 H160" stroke={art.grey} strokeWidth="1.5" />
     <g transform="translate(36 -22) scale(1.5)">
       <Serum />
     </g>
@@ -458,16 +485,16 @@ const SkinCropped = ({ label }: ArtProps) => (
 // Seen from above: the tops of the shoulders and collar show as rings, the body narrows away.
 const SkinAbove = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <rect width="160" height="120" fill={TABLE} />
-    <g stroke={INK} strokeLinejoin="round" strokeLinecap="round">
-      <ellipse cx="86" cy="113" rx="30" ry="5" fill={TABLE_SHADOW} stroke="none" />
+    <rect width="160" height="120" fill={art.table} />
+    <g stroke={color.ink} strokeLinejoin="round" strokeLinecap="round">
+      <ellipse cx="86" cy="113" rx="30" ry="5" fill={art.tableShadow} stroke="none" />
       <path d="M54 74 L60 104 Q62 113 82 113 Q102 113 104 104 L110 74 Z" fill={TONES.ink.glass} strokeWidth="2.5" />
       <path d="M57.5 89 Q82 98 106.5 89 L103.5 103 Q82 111 60.5 103 Z" fill="#fff" strokeWidth="1.8" />
-      <path d="M58.6 94.5 Q82 103 105.4 94.5" fill="none" stroke={AMBER} strokeWidth="4" strokeLinecap="butt" />
+      <path d="M58.6 94.5 Q82 103 105.4 94.5" fill="none" stroke={color.accent} strokeWidth="4" strokeLinecap="butt" />
       <ellipse cx="82" cy="74" rx="28" ry="14" fill={TONES.ink.glass} strokeWidth="2.5" />
       <path d="M69 66 V73 Q82 80 95 73 V66" fill="#fff" strokeWidth="2" />
       <ellipse cx="82" cy="66" rx="13" ry="6.5" fill="#fff" strokeWidth="2" />
-      <path d="M74 66 Q74 51 82 51 Q90 51 90 66 Q82 70 74 66 Z" fill={INK} strokeWidth="2" />
+      <path d="M74 66 Q74 51 82 51 Q90 51 90 66 Q82 70 74 66 Z" fill={color.ink} strokeWidth="2" />
     </g>
     <PhoneDown cx={82} />
   </Frame>
@@ -476,8 +503,8 @@ const SkinAbove = ({ label }: ArtProps) => (
 // A hand gripping the bottle, with a tube and a jar crowding it.
 const SkinCluttered = ({ label }: ArtProps) => (
   <Frame label={label} w={160} h={120}>
-    <rect y="100" width="160" height="20" fill={TABLE} />
-    <path d="M0 100 H160" stroke={GREY} strokeWidth="1.5" />
+    <rect y="100" width="160" height="20" fill={art.table} />
+    <path d="M0 100 H160" stroke={art.grey} strokeWidth="1.5" />
     <g stroke={TONES.muted.line} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill={TONES.muted.fill}>
       <path d="M8 90 L4 36 H30 L26 90 Z" />
       <path d="M5 41 H29" fill="none" />
@@ -489,7 +516,7 @@ const SkinCluttered = ({ label }: ArtProps) => (
     <g transform="translate(56 18) scale(0.82)">
       <Serum />
     </g>
-    <g stroke={INK} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
+    <g stroke={color.ink} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" fill="#fff">
       <path d="M160 60 H136 Q124 60 124 71 V77 Q124 88 136 88 H160" />
       {[62, 68.5, 75, 81.5].map((y) => (
         <rect key={y} x="78" y={y} width="48" height="6.5" rx="3.25" />
@@ -567,20 +594,38 @@ const ART: Record<IndustryKey, { good: Art; caption: string; alt: string; avoid:
   },
 };
 
-function Badge({ ok }: { ok?: boolean }) {
-  const size = ok ? 30 : 24;
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        position: "absolute", top: 6, right: 6, width: size, height: size, borderRadius: "50%",
-        background: ok ? GREEN : RED, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: ok ? 17 : 13, fontWeight: 800, lineHeight: 1, boxShadow: "0 0 0 2px #fff",
-      }}
-    >
-      {ok ? "✓" : "✕"}
-    </span>
-  );
+type TipId = (typeof INDUSTRIES)[IndustryKey]["photoTips"][number]["id"];
+
+// The guide plays one scene per photo tip, in the order of photoTips. A tip with an "avoid" partner
+// plays a before-and-after: the drawing to avoid first, then the good drawing.
+const PAIR: Record<IndustryKey, Partial<Record<TipId, AvoidId>>> = {
+  gifting: { whole: "cropped", height: "above", plain: "cluttered", light: "dark" },
+  fashion: { hang: "above", whole: "cropped", plain: "cluttered", light: "dark" },
+  skincare: { whole: "cropped", height: "above", plain: "cluttered", light: "dark" },
+  automotive: { whole: "cropped", height: "above", light: "dark", clear: "cluttered" },
+};
+// Milliseconds: when the avoid drawing gives way to the good one, and how long each kind of scene lasts.
+// Four paired scenes and one solo scene make every category about 14.4 s in total.
+const LEN = { swap: 1100, paired: 3000, solo: 2400 };
+
+type Phase = "rest" | "avoid" | "good";
+type Status = "idle" | "playing" | "paused" | "done";
+
+function Badge({ ok = false }: { ok?: boolean }) {
+  return <VerdictDot ok={ok} size={ok ? 28 : 20} className="pg-badge" />;
+}
+
+// The phone's "reduce motion" setting, kept up to date if it changes while the page is open.
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(prefersReducedMotion);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(mq.matches);
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
+  return reduced;
 }
 
 // The vertical's first photo tip as one line, shown above the photo buttons so the most
@@ -588,9 +633,9 @@ function Badge({ ok }: { ok?: boolean }) {
 export function PhotoTip({ industry }: { industry: IndustryKey }) {
   const tip = INDUSTRIES[industry].photoTips[0];
   return (
-    <p style={{ fontSize: 15, lineHeight: 1.4, margin: "4px 0 10px", color: INK }}>
-      <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: AMBER, marginRight: 8, verticalAlign: "middle" }} />
-      <b>{tip.title}.</b> <span style={{ color: MUTED }}>{tip.detail}</span>
+    <p style={{ fontSize: 15, lineHeight: 1.4, margin: "0 0 12px", color: color.ink }}>
+      <span aria-hidden="true" style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: color.accent, marginRight: 8, verticalAlign: "middle" }} />
+      <b style={{ fontWeight: 600 }}>{tip.title}.</b> <span style={{ color: color.muted }}>{tip.detail}</span>
     </p>
   );
 }
@@ -598,12 +643,24 @@ export function PhotoTip({ industry }: { industry: IndustryKey }) {
 // openSignal: bump it to open the guide (a photo warning or a rejected cut-out).
 export default function PhotoGuide({ industry, defaultOpen = false, openSignal = 0 }: { industry: IndustryKey; defaultOpen?: boolean; openSignal?: number }) {
   const copy = INDUSTRIES[industry];
-  const art = ART[industry];
+  const pics = ART[industry];
   const [open, setOpen] = useState(defaultOpen);
   const ref = useRef<HTMLDetailsElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   // Only signals sent after mount open it, so switching greeting/offer doesn't reopen it or jump the page.
   const seen = useRef(openSignal);
-  const Good = art.good;
+  const Good = pics.good;
+
+  // The player. `run` goes up each time a scene starts, which remounts the stage drawings so their animations replay.
+  const reduced = useReducedMotion();
+  const scenes = copy.photoTips.map((t) => ({ tip: t.id, avoid: PAIR[industry][t.id] }));
+  const [at, setAt] = useState({ i: 0, phase: "rest" as Phase, run: 0 });
+  const [status, setStatus] = useState<Status>("idle");
+  const [inView, setInView] = useState(true); // at least half the stage on screen (stays true without IntersectionObserver)
+  const [pageShown, setPageShown] = useState(true); // the browser tab is showing
+  const live = open && !reduced && status === "playing" && inView && pageShown;
+  const wasLive = useRef(false);
+  const startScene = (i: number) => setAt((a) => ({ i, phase: scenes[i].avoid ? "avoid" : "good", run: a.run + 1 }));
 
   useEffect(() => {
     const el = ref.current;
@@ -621,69 +678,242 @@ export default function PhotoGuide({ industry, defaultOpen = false, openSignal =
     seen.current = openSignal;
   }, [openSignal]);
 
+  // First visit to this category in this browser: open the guide once, without scrolling.
+  // If storage is blocked, leave it closed rather than open it on every visit.
+  useEffect(() => {
+    const el = ref.current;
+    if (!GUIDE_AUTO_OPEN_FIRST_VISIT || !el || el.open) return;
+    let first = false;
+    try {
+      const key = `mmv-guide-seen:${industry}`;
+      if (localStorage.getItem(key) === null) {
+        localStorage.setItem(key, "1");
+        first = true;
+      }
+    } catch {
+      first = false;
+    }
+    if (first) {
+      el.open = true;
+      setOpen(true);
+    }
+  }, [industry]);
+
+  // Opening the card plays from the first scene; closing it goes back to the still frame.
+  useEffect(() => {
+    setAt((a) => (a.i === 0 && a.phase === "rest" ? a : { ...a, i: 0, phase: "rest" }));
+    setStatus(open ? "playing" : "idle");
+  }, [open]);
+
+  // Pause while less than half the stage is on screen.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const e = entries[entries.length - 1];
+        setInView(e.isIntersecting && e.intersectionRatio >= 0.5);
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [reduced]);
+
+  // Pause while the browser tab is hidden.
+  useEffect(() => {
+    const update = () => setPageShown(document.visibilityState !== "hidden");
+    update();
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
+
+  // Restart the current scene whenever playback becomes live again (play, back on screen, tab shown).
+  useEffect(() => {
+    if (live && !wasLive.current) startScene(at.i);
+    wasLive.current = live;
+  }, [live]);
+
+  // One scene at a time. Cleared on pause, close, off screen, unmount and StrictMode re-runs. It never loops.
+  useEffect(() => {
+    if (!live) return;
+    const s = scenes[at.i];
+    const swap = s.avoid ? window.setTimeout(() => setAt((a) => ({ ...a, phase: "good" })), LEN.swap) : undefined;
+    const next = window.setTimeout(() => (at.i + 1 < scenes.length ? startScene(at.i + 1) : setStatus("done")), s.avoid ? LEN.paired : LEN.solo);
+    return () => {
+      window.clearTimeout(swap);
+      window.clearTimeout(next);
+    };
+  }, [live, at.run]);
+
+  // Playing: pause. Paused: play again (the current scene restarts). Done: replay from the first scene.
+  const onControl = () => {
+    if (status === "playing") {
+      setStatus("paused");
+      return;
+    }
+    if (status === "done") setAt((a) => ({ ...a, i: 0, phase: "rest" }));
+    setStatus("playing");
+  };
+
+  // Tapping a tip jumps to its scene and plays from there.
+  const onTip = (k: number) => {
+    if (live) {
+      startScene(k);
+      return;
+    }
+    // Not live (paused, off screen or tab hidden): show the new scene's still frame until playback starts it.
+    setAt((a) => ({ ...a, i: k, phase: "rest" }));
+    setStatus("playing");
+  };
+
+  const i = at.i;
+  const scene = scenes[i];
+  const avoidId = scene.avoid;
+  const Avoid = avoidId ? pics.avoid[avoidId] : null;
+  const yes = at.phase !== "avoid";
+  const ctl: { icon: IconName; label: string } =
+    status === "playing" ? { icon: "pause", label: "Pause guide" } : status === "done" ? { icon: "replay", label: "Replay guide" } : { icon: "play", label: "Play guide" };
+  const goodLabel = `Drawing of a good photo. ${pics.alt}`;
+
+  // Story-style progress: one segment per scene; the current one fills over the scene's length.
+  const segments = (full: boolean) => (
+    <div className="pg-segs">
+      {scenes.map((s, k) => (
+        <span
+          key={s.tip}
+          className="pg-seg"
+          data-state={full || k < i ? "done" : k === i ? "now" : undefined}
+          style={!full && k === i ? ({ "--len": `${s.avoid ? LEN.paired : LEN.solo}ms` } as CSSProperties) : undefined}
+        >
+          <i />
+        </span>
+      ))}
+    </div>
+  );
+
+  const caption = (
+    <figcaption style={{ ...text.small, color: color.muted, marginTop: 12 }}>
+      <b style={{ color: color.success, fontWeight: 600 }}>Like this:</b> {pics.caption}
+    </figcaption>
+  );
+
   return (
     <details
       ref={ref}
-      className="mmv-photo-guide"
+      className="mmv-guide"
       open={defaultOpen}
       onToggle={(e) => setOpen(e.currentTarget.open)}
-      style={{ border: "1px solid #e3e6eb", borderRadius: 12, background: "#fff", margin: "8px 0 12px" }}
+      style={{ margin: "8px 0 16px", border: `1px solid ${color.line}`, borderRadius: 16, background: color.surface }}
     >
-      <summary style={{ listStyle: "none", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", minHeight: 48, boxSizing: "border-box", cursor: "pointer" }}>
-        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 9, background: INK, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={AMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-            <circle cx="12" cy="13" r="3.5" />
-          </svg>
+      <summary style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 56, padding: "12px 16px", boxSizing: "border-box", cursor: "pointer" }}>
+        <span aria-hidden="true" style={{ flex: "none", display: "block", width: 64, height: 40, borderRadius: 8, overflow: "hidden", "--pg-r": "8px" } as CSSProperties}>
+          <Good label={goodLabel} />
         </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <b style={{ display: "block", fontSize: 16, color: INK }}>How to take a great photo</b>
-          <span style={{ display: "block", fontSize: 14, color: MUTED }}>
+        <span style={{ flex: 1, minWidth: 0, textWrap: "balance" }}>
+          <b style={{ display: "block", fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}>How to take a great photo</b>
+          <span style={{ display: "block", ...text.small, color: color.muted }}>
             {open ? "Good photos make good ads." : "See what works, with pictures."}
           </span>
         </span>
-        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
-          <path d="M5 8l5 5 5-5" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <span aria-hidden="true" style={{ display: "flex", flex: "none", color: color.muted }}>
+          <Icon name="chevronDown" className="mmv-chev" />
+        </span>
       </summary>
-      <style>{".mmv-photo-guide>summary::-webkit-details-marker{display:none}"}</style>
 
-      <div style={{ padding: "0 14px 16px" }}>
-        <figure style={{ margin: 0 }}>
-          <div style={{ position: "relative" }}>
-            <Good label={`Drawing of a good photo. ${art.alt}`} />
-            <Badge ok />
-          </div>
-          <figcaption style={{ fontSize: 14, color: MUTED, marginTop: 8, lineHeight: 1.4 }}>
-            <b style={{ color: GREEN_TEXT }}>Like this:</b> {art.caption}
-          </figcaption>
-        </figure>
+      <div className="mmv-guide-body" style={{ padding: "0 16px 16px" }}>
+        {reduced ? (
+          // Reduce motion: the finished still, with every segment full. No player.
+          <figure style={{ margin: 0 }}>
+            <div className="pg-stage" data-phase="rest">
+              <div className="pg-layer pg-good">
+                <Good label={goodLabel} />
+              </div>
+              <div aria-hidden="true">
+                {segments(true)}
+                <span className="pg-verdict pg-verdict--yes" style={{ animation: "none" }}>
+                  <VerdictDot ok />
+                  Like this
+                </span>
+              </div>
+            </div>
+            {caption}
+          </figure>
+        ) : (
+          <figure style={{ margin: 0 }}>
+            <div ref={stageRef} className="pg-stage" data-phase={at.phase} data-tip={scene.tip} data-paused={live ? undefined : ""}>
+              {/* The drawings only show what the tips below say, so screen readers skip them. */}
+              <div key={`${i}-${at.run}`} aria-hidden="true">
+                {Avoid && avoidId && (
+                  <div className="pg-layer pg-avoid">
+                    {/* Sized from the width, because a % height doesn't resolve inside the grid layer and overflows the
+                        stage. Up to 68% of the stage's width, and small enough on phones that the 4:3 frame (sitting
+                        6px above the bottom) starts below the verdict pill, which ends 44px from the top. */}
+                    <div style={{ width: "min(68%, calc(83.3% - 70px))", height: "auto" }}>
+                      <Avoid label={`Drawing of a photo to avoid: ${pics.avoidAlt[avoidId]}`} />
+                    </div>
+                  </div>
+                )}
+                <div className="pg-layer pg-good">
+                  <Good label={goodLabel} />
+                </div>
+                {segments(status === "done")}
+                <span key={at.phase} className={`pg-verdict pg-verdict--${yes ? "yes" : "no"}`}>
+                  <VerdictDot ok={yes} />
+                  {yes ? "Like this" : "Avoid"}
+                </span>
+              </div>
+              {/* Outside the remounted part, so it keeps keyboard focus from scene to scene. The outline
+                  sits inside the button because the stage clips anything past its edge. */}
+              <button type="button" className="pg-ctl" aria-label={ctl.label} onClick={onControl} style={{ outlineOffset: -4 }}>
+                <span>
+                  <Icon name={ctl.icon} size={18} />
+                </span>
+              </button>
+            </div>
+            {caption}
+          </figure>
+        )}
 
-        <ol style={{ listStyle: "none", padding: 0, margin: "14px 0 0" }}>
-          {copy.photoTips.map((tip, i) => (
-            <li key={tip.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, fontSize: 15, lineHeight: 1.4 }}>
-              <span aria-hidden="true" style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: AMBER, color: INK, fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>
-                {i + 1}
-              </span>
-              <span>
-                <b style={{ color: INK }}>{tip.title}.</b> <span style={{ color: MUTED }}>{tip.detail}</span>
-              </span>
-            </li>
-          ))}
+        <ol className="pg-tips">
+          {copy.photoTips.map((tip, k) =>
+            reduced ? (
+              <li key={tip.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "8px 0", fontSize: 15, lineHeight: 1.4, color: color.muted }}>
+                <span className="pg-num" aria-hidden="true">{k + 1}</span>
+                <span>
+                  <b style={{ color: color.ink, fontWeight: 600 }}>{tip.title}.</b> {tip.detail}
+                </span>
+              </li>
+            ) : (
+              <li key={tip.id}>
+                <button
+                  type="button"
+                  className="pg-tip"
+                  aria-current={(status === "playing" || status === "paused") && k === i ? "step" : undefined}
+                  onClick={() => onTip(k)}
+                >
+                  <span className="pg-num" aria-hidden="true">{k + 1}</span>
+                  <span>
+                    <b>{tip.title}.</b> {tip.detail}
+                  </span>
+                </button>
+              </li>
+            ),
+          )}
         </ol>
 
-        <p style={{ margin: "16px 0 8px", fontSize: 15, fontWeight: 700, color: INK }}>Avoid these</p>
-        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+        <p style={{ margin: "24px 0 12px", fontSize: 15, fontWeight: 600, lineHeight: 1.35 }}>Avoid these</p>
+        <ul className="pg-avoid-grid">
           {copy.photoAvoid.map((avoid) => {
-            const Thumb = art.avoid[avoid.id];
+            const Thumb = pics.avoid[avoid.id];
             return (
-              <li key={avoid.id} style={{ border: "1px solid #eceef2", borderRadius: 10, padding: 6, display: "flex", flexDirection: "column", gap: 2 }}>
-                <div style={{ position: "relative", marginBottom: 4 }}>
-                  <Thumb label={`Drawing of a photo to avoid: ${art.avoidAlt[avoid.id]}`} />
+              <li key={avoid.id}>
+                <div className="pg-thumb">
+                  <Thumb label={`Drawing of a photo to avoid: ${pics.avoidAlt[avoid.id]}`} />
                   <Badge />
                 </div>
-                <b style={{ fontSize: 14, color: INK }}>{avoid.title}</b>
-                <span style={{ fontSize: 13, color: MUTED, lineHeight: 1.35 }}>{avoid.detail}</span>
+                <b style={{ display: "block", fontSize: 14, fontWeight: 600, lineHeight: 1.35 }}>{avoid.title}</b>
+                <span style={{ display: "block", marginTop: 2, fontSize: 13, lineHeight: 1.35, color: color.muted }}>{avoid.detail}</span>
               </li>
             );
           })}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { INDUSTRIES, SEASON, type IndustryKey } from "../convex/industries";
@@ -6,6 +6,8 @@ import { AD_SIZES, GREETING_SIZES, canvasToBlob, loadImage, renderAd, renderGree
 import { useCutoutState, type CutoutRun, type Trimmed } from "./cutout";
 import { loadLook, saveLook } from "./draft";
 import SignIn, { hasPendingCode } from "./SignIn";
+import { color, prefersReducedMotion, text } from "./theme";
+import { CheckDisc, Icon } from "./Icons";
 
 // What NewAd made: the words, and the photo with its cut-out (null for a greeting without a photo).
 export type Made = {
@@ -20,11 +22,6 @@ export type SaveState = "idle" | "saving" | "saved" | "error";
 type Rendered = AdSize & { url: string; blob: Blob; pass: number };
 
 const ORIGINAL = "original";
-const INK = "#111317";
-const MUTED = "#5b6170";
-const AMBER = "#F5B700";
-const MAROON = "#6B1020";
-const GOLD = "#E9B44C";
 
 // Where a printed card goes, per vertical.
 const PRINT_USE: Record<IndustryKey, string> = {
@@ -61,10 +58,9 @@ function thumbBox(size: AdSize) {
   return { width: Math.round(size.width * scale), height: Math.round(size.height * scale) };
 }
 
-const note: CSSProperties = { background: "#FFF6D6", border: "1px solid #F5B700", borderRadius: 8, padding: "10px 12px", color: "#4a3700", fontSize: 14, lineHeight: 1.45, margin: "12px 0" };
-const linkButton: CSSProperties = { background: "none", border: "none", padding: "0 4px", minHeight: 44, cursor: "pointer", fontFamily: "inherit", fontSize: 15, textDecoration: "underline", color: "inherit" };
-const smallButton: CSSProperties = { display: "block", minHeight: 44, marginTop: 8, padding: "0 16px", fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: INK, background: "#fff", border: `1px solid ${INK}`, borderRadius: 8, cursor: "pointer" };
-const slide = "@keyframes mmv-slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } } .mmv-slide { animation: mmv-slide 1.4s ease-in-out infinite; } @media (prefers-reduced-motion: reduce) { .mmv-slide { animation-duration: 4s; } }";
+// Words over the dark progress panel: white for the step, 80% white for the rest.
+const onScrim = "#FFFFFF";
+const onScrimSoft = "rgba(255,255,255,0.8)";
 
 export default function AdResults({
   industry,
@@ -401,31 +397,31 @@ export default function AdResults({
     void zipAll(ads);
   }
 
-  // Progress strip over the picture while the cut-out is on its way.
+  // Progress panel over the picture while the cut-out is on its way.
   const showStrip =
     needsCut && !error && (stage === "loading" || stage === "download" || stage === "cutting" || (stage === "done" && drawnCut !== cut));
-  let step: ReactNode = null;
+  // One step, in four parts: "Step 2 of 3", what is happening, the % or seconds, and a detail line.
+  let stepN: string | null = null;
+  let stepText: string | null = null;
+  let stepMeta: string | null = null;
   let stepDetail: string | null = null;
   if (cutState?.stage === "loading") {
-    step = "Step 1 of 3 · Getting the cut-out tool ready";
+    stepN = "Step 1 of 3";
+    stepText = "Getting the cut-out tool ready";
     stepDetail = "Your photo as it is is shown for now. It updates by itself.";
   } else if (cutState?.stage === "download") {
-    step = (
-      <>
-        Step 1 of 3 · Getting the cut-out tool ready<span aria-hidden="true"> · {Math.min(99, Math.floor(cutState.fraction * 100))}%</span>
-      </>
-    );
+    stepN = "Step 1 of 3";
+    stepText = "Getting the cut-out tool ready";
+    stepMeta = `${Math.min(99, Math.floor(cutState.fraction * 100))}%`;
     stepDetail = "First time only, about 100 MB. Wi-Fi is faster. Keep this screen open.";
   } else if (cutState?.stage === "cutting") {
-    step = (
-      <>
-        Step 2 of 3 · Cutting out your {noun}
-        <span aria-hidden="true"> · {Math.max(0, Math.floor((now - cutState.startedAt) / 1000))} s</span>
-      </>
-    );
+    stepN = "Step 2 of 3";
+    stepText = `Cutting out your ${noun}`;
+    stepMeta = `${Math.max(0, Math.floor((now - cutState.startedAt) / 1000))} s`;
     stepDetail = "Usually 10 to 40 seconds. Your photo as it is is shown for now.";
   } else if (cutState?.stage === "done") {
-    step = `Step 3 of 3 · Putting your ${noun} on ${lookLabel}`;
+    stepN = "Step 3 of 3";
+    stepText = `Putting your ${noun} on ${lookLabel}`;
   }
 
   // Offers on the original photo: one tap back to the backdrop (keeps this row the same height).
@@ -441,20 +437,20 @@ export default function AdResults({
 
   return (
     <section>
-      <style>{slide}</style>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: 44 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", columnGap: 16, minHeight: 44 }}>
         {onChangeWords && (
-          <button type="button" onClick={() => onChangeWords()} style={linkButton}>
-            ← Change the words
+          <button type="button" onClick={() => onChangeWords()} className="mmv-link">
+            <Icon name="chevronLeft" size={16} />
+            Change the words
           </button>
         )}
-        <button type="button" onClick={onMakeAnother} style={{ ...linkButton, marginLeft: "auto" }}>
+        <button type="button" onClick={onMakeAnother} className="mmv-link mmv-link--muted" style={{ marginLeft: "auto" }}>
           Make another
         </button>
       </div>
-      <h2 style={{ fontSize: 20, margin: "4px 0 10px" }}>{greeting ? "Your Diwali greeting" : "Your ads"}</h2>
+      <h2 style={{ ...text.title, margin: "8px 0 16px" }}>{greeting ? "Your Diwali greeting" : "Your ads"}</h2>
 
-      <div style={{ position: "relative", height: "min(48vh, 400px)", background: "#f4f5f7", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+      <div className="mmv-preview">
         {shown ? (
           <img
             src={shown.url}
@@ -462,101 +458,138 @@ export default function AdResults({
             // Guests save through the email step, not a long-press.
             draggable={guest ? false : undefined}
             onContextMenu={guest ? (e) => e.preventDefault() : undefined}
-            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", opacity: stale ? 0.55 : 1, transition: "opacity 0.2s", ...(guest ? { WebkitTouchCallout: "none", userSelect: "none" } : {}) }}
+            style={{ opacity: stale ? 0.55 : 1, ...(guest ? { WebkitTouchCallout: "none", userSelect: "none" } : {}) }}
           />
         ) : (
-          placeholder && <p style={{ margin: 0, padding: 16, fontSize: 15, color: MUTED, textAlign: "center" }}>{placeholder}</p>
+          placeholder && <p style={{ margin: 0, padding: 16, fontSize: 15, lineHeight: 1.45, color: color.muted, textAlign: "center" }}>{placeholder}</p>
         )}
         {stale && (
-          <span style={{ position: "absolute", top: 8, left: 8, padding: "3px 10px", borderRadius: 999, background: "rgba(17,19,23,0.75)", color: "#fff", fontSize: 13 }}>Updating…</span>
+          <span style={{ position: "absolute", top: 12, left: 12, padding: "4px 10px", borderRadius: 999, background: "rgba(250,248,244,0.92)", color: color.ink, fontSize: 13, fontWeight: 500, lineHeight: 1.3 }}>
+            Updating…
+          </span>
         )}
         {showStrip && (
-          <div role="status" aria-live="polite" style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "rgba(17,19,23,0.82)", color: "#fff", fontSize: 14, lineHeight: 1.35, padding: "8px 12px" }}>
-            <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 3, overflow: "hidden", background: "rgba(255,255,255,0.18)" }}>
+          <div
+            role="status"
+            aria-live="polite"
+            style={{ position: "absolute", left: 12, right: 12, bottom: 12, overflow: "hidden", padding: "12px 12px 10px", borderRadius: 12, background: color.scrim, color: onScrim }}
+          >
+            <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 2, overflow: "hidden", background: "rgba(255,255,255,0.18)" }}>
               {cutState?.stage === "download" ? (
-                <div style={{ height: "100%", width: `${Math.min(99, Math.floor(cutState.fraction * 100))}%`, background: AMBER, transition: "width 0.3s" }} />
+                <div
+                  style={{ height: "100%", width: `${Math.min(99, Math.floor(cutState.fraction * 100))}%`, background: color.accent, transition: prefersReducedMotion() ? undefined : "width 0.3s" }}
+                />
               ) : (
-                <div className="mmv-slide" style={{ height: "100%", width: "35%", background: AMBER }} />
+                <div className="mmv-slide" style={{ height: "100%", width: "35%", background: color.accent }} />
               )}
             </div>
-            <div style={{ fontWeight: 600 }}>{step}</div>
-            {stepDetail && <div style={{ opacity: 0.85 }}>{stepDetail}</div>}
+            <div style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.25, color: onScrimSoft }}>{stepN}</div>
+            <div style={{ display: "flex", alignItems: "baseline", columnGap: 12, marginTop: 2 }}>
+              <span style={{ flex: "1 1 auto", minWidth: 0, fontSize: 14, fontWeight: 600, lineHeight: 1.35 }}>{stepText}</span>
+              {stepMeta && (
+                <span aria-hidden="true" className="mmv-num" style={{ flex: "none", fontSize: 13, fontWeight: 500, lineHeight: 1.35, color: onScrimSoft }}>
+                  {stepMeta}
+                </span>
+              )}
+            </div>
+            {stepDetail && <div style={{ marginTop: 2, fontSize: 13, lineHeight: 1.4, color: onScrimSoft }}>{stepDetail}</div>}
           </div>
         )}
       </div>
 
-      {/* Two lines kept free, so the print note and "Done" line don't push the buttons down. */}
-      <div style={{ minHeight: 41, margin: "8px 0 0", fontSize: 14, lineHeight: 1.45, color: MUTED }}>
+      {/* Lines kept free, so the print note and "Done" line don't push the buttons down.
+          Greetings keep 3 lines, because their print note sits on its own line under the size. */}
+      <div style={{ minHeight: greeting ? 62 : 44, margin: "8px 0 0", ...text.small, color: color.muted }}>
         {size.label}
-        {size.print && ` · Print at 4×6 inches (photo size) and ${PRINT_USE[industry]}.`}
-        <div role="status">{doneNote}</div>
+        {size.print && <div>Print at 4×6 inches (photo size) and {PRINT_USE[industry]}.</div>}
+        <div role="status">
+          {doneNote && (
+            <p className="mmv-status mmv-status--done">
+              <Icon name="check" size={16} />
+              <span>{doneNote}</span>
+            </p>
+          )}
+        </div>
       </div>
-      {error && <p role="alert" style={{ color: "crimson", fontSize: 15, margin: "8px 0" }}>{error}</p>}
-      {photoUsed && cut?.touchesEdge && (
-        <p style={note}>
-          Part of your {noun} looks cut off in the photo. For the best {greeting ? "greeting" : "ads"}, retake it with the whole {noun} in frame.
+      {error && (
+        <p role="alert" className="mmv-error" style={{ margin: "12px 0" }}>
+          <Icon name="alert" size={18} />
+          <span>{error}</span>
         </p>
       )}
+      {photoUsed && cut?.touchesEdge && (
+        <div className="mmv-note mmv-note--caution" style={{ margin: "12px 0" }}>
+          <Icon name="alert" />
+          <p style={{ margin: 0 }}>
+            Part of your {noun} looks cut off in the photo. For the best {greeting ? "greeting" : "ads"}, retake it with the whole {noun} in frame.
+          </p>
+        </div>
+      )}
       {photoUsed && stage === "bad" && (
-        <div style={note}>
-          {greeting
-            ? `We couldn't cleanly cut out the ${noun} from this photo, so it appears as a small framed photo. A photo with the whole ${noun} in view and a plain background works best.`
-            : `We couldn't cleanly cut out the ${noun} from this photo, so your ads use the original photo. A photo with the whole ${noun} in view and a plain background works best.`}
-          {onChangeWords && (
-            <button type="button" onClick={() => onChangeWords("photo")} style={smallButton}>
-              See photo tips and retake
-            </button>
-          )}
+        <div className="mmv-note mmv-note--caution" style={{ margin: "12px 0" }}>
+          <Icon name="alert" />
+          <div>
+            <p style={{ margin: 0 }}>
+              {greeting
+                ? `We couldn't cleanly cut out the ${noun} from this photo, so it appears as a small framed photo. A photo with the whole ${noun} in view and a plain background works best.`
+                : `We couldn't cleanly cut out the ${noun} from this photo, so your ads use the original photo. A photo with the whole ${noun} in view and a plain background works best.`}
+            </p>
+            {onChangeWords && (
+              <button type="button" onClick={() => onChangeWords("photo")} className="mmv-btn2 mmv-btn2--sm">
+                See photo tips and retake
+              </button>
+            )}
+          </div>
         </div>
       )}
       {photoUsed && stage === "failed" && (
-        <div style={note}>
-          The cut-out tool didn't finish downloading. Check your internet, then tap Try again.
-          <button type="button" onClick={onRetryCutout} style={smallButton}>
-            Try again
-          </button>
+        <div className="mmv-note mmv-note--caution" style={{ margin: "12px 0" }}>
+          <Icon name="alert" />
+          <div>
+            <p style={{ margin: 0 }}>The cut-out tool didn't finish downloading. Check your internet, then tap Try again.</p>
+            <button type="button" onClick={onRetryCutout} className="mmv-btn2 mmv-btn2--sm">
+              Try again
+            </button>
+          </div>
         </div>
       )}
       {!greeting && made.photoUrl && look !== null && (look !== ORIGINAL || backTo) && (
-        <button type="button" onClick={() => pick(look !== ORIGINAL ? ORIGINAL : backTo!.key)} style={linkButton}>
+        <button type="button" onClick={() => pick(look !== ORIGINAL ? ORIGINAL : backTo!.key)} className="mmv-link">
           {look !== ORIGINAL ? `${Noun} looks wrong? Use the original photo` : `Put your ${noun} on ${backTo!.label}`}
         </button>
       )}
       {greeting && made.photoUrl && (
-        <button type="button" onClick={() => setSkipPhoto((v) => !v)} style={linkButton}>
+        <button type="button" onClick={() => setSkipPhoto((v) => !v)} className="mmv-link">
           {skipPhoto ? "Put my photo back" : "Leave the photo out"}
         </button>
       )}
 
-      <div role="radiogroup" aria-label="Sizes" style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 6, margin: "10px 0" }}>
+      <div
+        role="radiogroup"
+        aria-label="Sizes"
+        style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 4, margin: "16px 0", padding: "8px 0", borderTop: `1px solid ${color.line}`, borderBottom: `1px solid ${color.line}` }}
+      >
         {sizes.map((s) => {
           const on = s.key === selected;
           const box = thumbBox(s);
           const pic = pics[s.key];
           return (
-            <button
-              type="button"
-              role="radio"
-              aria-checked={on}
-              key={s.key}
-              onClick={() => select(s.key)}
-              style={{ minHeight: 64, minWidth: 0, padding: on ? "5px 0" : "6px 1px", borderRadius: 8, background: "#fff", border: on ? `2px solid ${INK}` : "1px solid #d5d8de", color: INK, fontFamily: "inherit", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}
-            >
+            <button type="button" role="radio" aria-checked={on} key={s.key} onClick={() => select(s.key)} className="mmv-tile mmv-choice" style={{ minHeight: 64, justifyContent: "center" }}>
               <span style={{ height: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {pic ? (
-                  <img src={pic.url} alt="" draggable={false} style={{ ...box, objectFit: "contain", pointerEvents: "none", opacity: pic.pass === pass ? 1 : 0.55 }} />
+                  <img src={pic.url} alt="" draggable={false} className="mmv-media" style={{ ...box, objectFit: "contain", borderRadius: 2, background: "none", pointerEvents: "none", opacity: pic.pass === pass ? 1 : 0.55 }} />
                 ) : (
-                  <span style={{ ...box, boxSizing: "border-box", border: "1px solid #b5bac4", borderRadius: 2 }} />
+                  <span className="mmv-media" style={{ ...box, boxSizing: "border-box", border: `1px solid ${color.lineStrong}`, borderRadius: 2, background: "none" }} />
                 )}
               </span>
-              <span style={{ fontSize: 12, lineHeight: 1.2 }}>{s.short ?? s.label}</span>
+              <span>{s.short ?? s.label}</span>
             </button>
           );
         })}
       </div>
 
       {guest && gateOpen ? (
-        <div ref={gateRef} style={{ border: "1px solid #e3e6eb", borderRadius: 12, padding: 14 }}>
+        <div ref={gateRef} className="mmv-panel">
           <SignIn
             heading={greeting ? "Save and send your greeting" : "Save and send your ads"}
             intro="Enter your email and we'll send a 6-digit code. No password. It's saved to your account so you can send it again later."
@@ -566,72 +599,79 @@ export default function AdResults({
       ) : (
         <>
           {signedIn && gateUsed && saveState === "saved" && !sent && (
-            <p role="status" style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 600 }}>
-              Saved. Tap {primaryLabel} to send it.
+            <p role="status" className="mmv-status mmv-status--done" style={{ margin: "0 0 12px" }}>
+              <Icon name="check" size={16} />
+              <span>Saved. Tap {primaryLabel} to send it.</span>
             </p>
           )}
-          <button
-            type="button"
-            onClick={primary}
-            disabled={!shown}
-            style={{ display: "block", width: "100%", minHeight: 52, padding: "12px 20px", fontFamily: "inherit", fontSize: 17, fontWeight: 700, borderRadius: 10, border: "none", cursor: shown ? "pointer" : "default", opacity: shown ? 1 : 0.6, background: greeting ? MAROON : INK, color: greeting ? GOLD : "#fff" }}
-          >
+          <button type="button" onClick={primary} disabled={!shown} className="mmv-btn">
             {primaryLabel}
           </button>
-          {touch && <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.45, color: MUTED }}>Pick WhatsApp, Instagram or email, or Save Image to keep it in your photos.</p>}
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", columnGap: 16, marginTop: 4 }}>
-            <button type="button" onClick={saveAll} disabled={!allReady || zipping} style={{ ...linkButton, opacity: allReady && !zipping ? 1 : 0.45, cursor: allReady && !zipping ? "pointer" : "default" }}>
-              {touch ? `Save all ${sizes.length} pictures` : `Download all ${sizes.length} (zip)`}
-            </button>
-            {touch && (
-              <button type="button" onClick={downloadOne} disabled={!shown} style={linkButton}>
+          {touch && <p style={{ margin: "8px 0 0", ...text.small, color: color.muted }}>Pick WhatsApp, Instagram or email, or Save Image to keep it in your photos.</p>}
+          {touch ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 12 }}>
+              <button type="button" onClick={saveAll} disabled={!allReady || zipping} className="mmv-btn2 mmv-btn2--sm mmv-btn2--block">
+                {`Save all ${sizes.length} pictures`}
+              </button>
+              <button type="button" onClick={downloadOne} disabled={!shown} className="mmv-btn2 mmv-btn2--sm mmv-btn2--block">
                 Download
               </button>
-            )}
-          </div>
-          {zipping && <p role="status" style={{ margin: "8px 0", fontSize: 15, color: MUTED }}>Making the zip…</p>}
-          {shareNote && <p style={note}>{shareNote}</p>}
-          {signedIn && gateUsed && saveState === "saving" && <p role="status" style={{ margin: "8px 0", fontSize: 15, color: MUTED }}>Saving to your account…</p>}
+            </div>
+          ) : (
+            <button type="button" onClick={saveAll} disabled={!allReady || zipping} className="mmv-btn2 mmv-btn2--block" style={{ marginTop: 12 }}>
+              {`Download all ${sizes.length} (zip)`}
+            </button>
+          )}
+          {zipping && (
+            <p role="status" className="mmv-status mmv-status--wait" style={{ margin: "12px 0 0" }}>
+              <span className="mmv-spin" />
+              Making the zip…
+            </p>
+          )}
+          {shareNote && (
+            <div className="mmv-note mmv-note--caution" style={{ margin: "12px 0" }}>
+              <Icon name="alert" />
+              <p style={{ margin: 0 }}>{shareNote}</p>
+            </div>
+          )}
+          {signedIn && gateUsed && saveState === "saving" && (
+            <p role="status" className="mmv-status mmv-status--wait" style={{ margin: "12px 0 0" }}>
+              <span className="mmv-spin" />
+              Saving to your account…
+            </p>
+          )}
           {signedIn && saveState === "error" && (
-            <div role="alert" style={note}>
-              We couldn't save it to your account. Your picture is still here.
-              <button type="button" onClick={onRetrySave} style={smallButton}>
-                Try again
-              </button>
+            <div role="alert" className="mmv-note mmv-note--error" style={{ margin: "12px 0" }}>
+              <Icon name="alert" />
+              <div>
+                <p style={{ margin: 0 }}>We couldn't save it to your account. Your picture is still here.</p>
+                <button type="button" onClick={onRetrySave} className="mmv-btn2 mmv-btn2--sm">
+                  Try again
+                </button>
+              </div>
             </div>
           )}
         </>
       )}
 
-      <p style={{ fontSize: 15, color: MUTED, margin: "20px 0 8px" }}>Try another background</p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
+      <h3 style={{ ...text.heading, margin: "32px 0 12px" }}>Try another background</h3>
+      <div className="mmv-bg-grid">
         {looks.map((l) => {
           const disabled = !greeting && l.key !== ORIGINAL && cutBroken;
           const on = look === l.key;
           return (
-            <button
-              type="button"
-              key={l.key}
-              onClick={() => pick(l.key)}
-              disabled={disabled}
-              aria-pressed={on}
-              // The selected border is 2px thicker; the padding gives those 2px back so nothing moves.
-              style={{ minHeight: 44, minWidth: 0, padding: on ? 0 : 2, border: on ? `3px solid ${AMBER}` : "1px solid #ccc", borderRadius: 8, background: "#fff", color: INK, fontFamily: "inherit", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1 }}
-            >
+            <button type="button" key={l.key} onClick={() => pick(l.key)} disabled={disabled} aria-pressed={on} className="mmv-tile mmv-choice">
               {l.url && (
-                <img src={l.url} alt="" crossOrigin="anonymous" loading="lazy" decoding="async" style={{ width: "100%", height: 48, objectFit: "cover", borderRadius: 5, display: "block" }} />
+                <img src={l.url} alt="" crossOrigin="anonymous" loading="lazy" decoding="async" className="mmv-media" style={{ width: "100%", height: 56, objectFit: "cover", borderRadius: 10 }} />
               )}
-              <span style={{ display: "block", fontSize: 12, lineHeight: 1.25, padding: "4px 2px" }}>{l.label}</span>
+              <span style={{ padding: "0 2px" }}>{l.label}</span>
+              {on && <CheckDisc size={16} style={{ position: "absolute", top: 4, right: 4 }} />}
             </button>
           );
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={onMakeAnother}
-        style={{ display: "block", width: "100%", minHeight: 48, marginTop: 20, fontFamily: "inherit", fontSize: 16, fontWeight: 600, color: INK, background: "#fff", border: `1px solid ${INK}`, borderRadius: 10, cursor: "pointer" }}
-      >
+      <button type="button" onClick={onMakeAnother} className="mmv-btn2 mmv-btn2--block" style={{ marginTop: 32 }}>
         Make another
       </button>
     </section>

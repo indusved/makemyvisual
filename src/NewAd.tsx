@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { INDUSTRIES, SEASON, type ContactKind, type FieldCopy, type IndustryKey } from "../convex/industries";
@@ -11,14 +11,11 @@ import { cutoutFromUrl, preloadCutout, startCutout, useCutoutState, type CutoutR
 import { clearDraft, loadPhoto, loadWords, savePhoto, saveWords } from "./draft";
 import PhotoGuide, { PhotoTip } from "./PhotoGuide";
 import { checkPhoto, shrinkPhoto, type PhotoWarning } from "./photoCheck";
+import { Icon } from "./Icons";
+import { color, text } from "./theme";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/webp";
-const INK = "#111317";
-const AMBER = "#F5B700";
-const MUTED = "#5b6170";
-const MAROON = "#6B1020";
-const GOLD = "#E9B44C";
 const OWN = "own";
 const HEADLINE_MAX = 60;
 const NAME_MAX = 60;
@@ -30,18 +27,12 @@ type Profile = { industry: IndustryKey; market: "IN" | "US"; businessName: strin
 type MadeItem = Made & { id: number; photoKey: number; file: File | null; savedJobId?: Id<"jobs">; savedHasCutout?: boolean };
 type Photo = { file: File | null; url: string | null; run: CutoutRun | null; key: number };
 
-const input: CSSProperties = { display: "block", width: "100%", padding: 12, fontSize: 16, margin: "6px 0 14px", boxSizing: "border-box", fontFamily: "inherit" };
-const hint: CSSProperties = { color: "#666", fontSize: 13, marginTop: -10, marginBottom: 14 };
-const pickButton: CSSProperties = {
-  flex: "1 1 200px", minHeight: 48, padding: "12px 16px", fontSize: 16, fontWeight: 600, borderRadius: 10, border: `2px solid ${INK}`,
-  cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit",
-};
+// Looks come from the shared classes in theme.ts (GLOBAL_CSS); inline styles here are layout only.
 const offscreen = { position: "absolute" as const, width: 1, height: 1, opacity: 0, pointerEvents: "none" as const };
-const groupLabel: CSSProperties = { display: "block", fontWeight: 600, margin: "0 0 8px" };
-const linkButton: CSSProperties = { background: "none", border: "none", padding: 0, minHeight: 44, font: "inherit", fontSize: 15, color: INK, textDecoration: "underline", cursor: "pointer" };
-const note: CSSProperties = { background: "#FFF6D6", border: `1px solid ${AMBER}`, borderRadius: 10, padding: "12px 14px", margin: "6px 0 10px", fontSize: 15, lineHeight: 1.4, color: INK };
-// Focus ring for chips whose real radio button is hidden.
-const CHIP_CSS = ".mmv-chip input:focus-visible+span{outline:3px solid #111317;outline-offset:2px}";
+// The amber corners of the photo frame. Keyed by photoKey with the frame, so they snap in for each new photo.
+const CORNERS = ["tl", "tr", "br", "bl"] as const;
+// Labels from industries.ts that end in "(optional)" show that part quieter; the words stay the same.
+const OPTIONAL = "(optional)";
 
 // Devanagari text gets lang="hi" so screen readers read it in Hindi.
 const langOf = (text: string) => (/[ऀ-ॿ]/.test(text) ? "hi" : undefined);
@@ -61,14 +52,14 @@ type FieldKey = "headline" | "details" | "validity" | "finePrint";
 function DiyaShape() {
   return (
     <g>
-      <circle cx="20" cy="14" r="11" fill={GOLD} opacity="0.22" />
+      <circle cx="20" cy="14" r="11" fill="#E9B44C" opacity="0.22" />
       <path d="M20 3.5c3.4 4.6 5 7.8 5 10.4a5 5 0 0 1-10 0c0-2.6 1.6-5.8 5-10.4z" fill="#FFC94A" />
       <path d="M20 9.5c1.5 2.2 2.2 3.6 2.2 4.8a2.2 2.2 0 0 1-4.4 0c0-1.2.7-2.6 2.2-4.8z" fill="#FFF4D6" />
-      <path d="M3 22.5c5.5-1.6 28.5-1.6 34 0-1.2 7.4-7.6 12-17 12s-15.8-4.6-17-12z" fill={GOLD} />
+      <path d="M3 22.5c5.5-1.6 28.5-1.6 34 0-1.2 7.4-7.6 12-17 12s-15.8-4.6-17-12z" fill="#E9B44C" />
       <path d="M3 22.5c5.5 1.4 28.5 1.4 34 0" fill="none" stroke="#B5832A" strokeWidth="1.4" />
-      <circle cx="12" cy="28" r="1.4" fill={MAROON} />
-      <circle cx="20" cy="29.5" r="1.4" fill={MAROON} />
-      <circle cx="28" cy="28" r="1.4" fill={MAROON} />
+      <circle cx="12" cy="28" r="1.4" fill={color.festive} />
+      <circle cx="20" cy="29.5" r="1.4" fill={color.festive} />
+      <circle cx="28" cy="28" r="1.4" fill={color.festive} />
     </g>
   );
 }
@@ -76,8 +67,8 @@ function DiyaShape() {
 // Thumbnail for a saved greeting that has no photo.
 function GreetingTile() {
   return (
-    <span aria-hidden="true" style={{ width: 80, height: 60, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${MAROON}, #3A0710)` }}>
-      <svg width="40" height="40" viewBox="0 0 40 40"><DiyaShape /></svg>
+    <span aria-hidden="true" style={{ width: 72, height: 54, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: color.festive }}>
+      <svg width="32" height="32" viewBox="0 0 40 40"><DiyaShape /></svg>
     </span>
   );
 }
@@ -90,55 +81,7 @@ function Seconds({ from }: { from: number }) {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-  return <span aria-hidden="true"> · {Math.max(0, Math.floor((now - from) / 1000))} s</span>;
-}
-
-function kindButton(selected: boolean): CSSProperties {
-  return {
-    minHeight: 48,
-    padding: "8px 10px",
-    borderRadius: 10,
-    fontSize: 16,
-    fontFamily: "inherit",
-    lineHeight: 1.25,
-    color: INK,
-    cursor: "pointer",
-    border: selected ? `2px solid ${INK}` : "1px solid #d5d8de",
-    background: selected ? "#FFF6D6" : "#fff",
-    fontWeight: selected ? 700 : 400,
-  };
-}
-
-function chip(selected: boolean): CSSProperties {
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    minHeight: 44,
-    boxSizing: "border-box",
-    padding: "10px 14px",
-    borderRadius: 999,
-    fontSize: 15,
-    lineHeight: 1.25,
-    cursor: "pointer",
-    border: `1.5px solid ${selected ? MAROON : "#c9ccd2"}`,
-    background: selected ? MAROON : "#fff",
-    color: selected ? "#fff" : INK,
-    fontWeight: selected ? 600 : 400,
-  };
-}
-
-function kindTag(kind: Kind): CSSProperties {
-  return {
-    display: "inline-block",
-    fontSize: 12,
-    fontWeight: 700,
-    letterSpacing: 0.3,
-    padding: "2px 8px",
-    borderRadius: 999,
-    marginBottom: 3,
-    background: kind === "greeting" ? MAROON : INK,
-    color: kind === "greeting" ? GOLD : AMBER,
-  };
+  return <span aria-hidden="true" className="mmv-num"> ({Math.max(0, Math.floor((now - from) / 1000))} s)</span>;
 }
 
 export default function NewAd({
@@ -712,14 +655,16 @@ export default function NewAd({
     const f = fields[key];
     const common = { id: key, name: key, value, maxLength, placeholder: `e.g. ${f.placeholder}`, "aria-describedby": f.hint ? `${key}-hint` : undefined };
     return (
-      <div>
-        <label htmlFor={key}>{f.label}</label>
+      <div className="mmv-field">
+        <label htmlFor={key} className="mmv-label">
+          {f.label.endsWith(OPTIONAL) ? <>{f.label.slice(0, -OPTIONAL.length)}<span className="mmv-opt">(optional)</span></> : f.label}
+        </label>
         {opts.multiline ? (
-          <textarea {...common} onChange={(e) => set(e.target.value)} rows={2} style={{ ...input, resize: "vertical", lineHeight: 1.4 }} />
+          <textarea {...common} onChange={(e) => set(e.target.value)} rows={2} className="mmv-input" />
         ) : (
-          <input {...common} ref={opts.inputRef} onChange={(e) => set(e.target.value)} required={opts.required} style={input} />
+          <input {...common} ref={opts.inputRef} onChange={(e) => set(e.target.value)} required={opts.required} className="mmv-input" />
         )}
-        {f.hint && <p id={`${key}-hint`} style={hint}>{f.hint}</p>}
+        {f.hint && <p id={`${key}-hint`} className="mmv-hint">{f.hint}</p>}
       </div>
     );
   }
@@ -728,155 +673,174 @@ export default function NewAd({
   if (showBusinessInputs) {
     businessBlock = (
       <>
-        <label htmlFor="biz-name" style={{ fontWeight: 600 }}>Your {copy.businessNoun}'s name</label>
-        <input
-          id="biz-name"
-          ref={nameRef}
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
-          required
-          maxLength={NAME_MAX}
-          autoComplete="organization"
-          placeholder={`e.g. ${copy.businessNamePlaceholder}`}
-          aria-describedby="biz-name-hint"
-          style={input}
-        />
-        <p id="biz-name-hint" style={hint}>Goes at the bottom of your {greeting ? "greeting" : "ads"}.</p>
-        <ContactField
-          id="biz-contact"
-          industry={industry}
-          contact={contact}
-          kind={contactKind}
-          picked={contactPicked}
-          onContact={setContact}
-          onKind={(next, tapped) => {
-            setContactKind(next);
-            if (tapped) setContactPicked(true);
-          }}
-          inputRef={contactRef}
-          inputStyle={input}
-          hintStyle={hint}
-        />
+        <div className="mmv-field">
+          <label htmlFor="biz-name" className="mmv-label">Your {copy.businessNoun}'s name</label>
+          <input
+            id="biz-name"
+            ref={nameRef}
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            required
+            maxLength={NAME_MAX}
+            autoComplete="organization"
+            placeholder={`e.g. ${copy.businessNamePlaceholder}`}
+            aria-describedby="biz-name-hint"
+            className="mmv-input"
+          />
+          <p id="biz-name-hint" className="mmv-hint">Goes at the bottom of your {greeting ? "greeting" : "ads"}.</p>
+        </div>
+        <div className="mmv-field">
+          <ContactField
+            id="biz-contact"
+            industry={industry}
+            contact={contact}
+            kind={contactKind}
+            picked={contactPicked}
+            onContact={setContact}
+            onKind={(next, tapped) => {
+              setContactKind(next);
+              if (tapped) setContactPicked(true);
+            }}
+            inputRef={contactRef}
+          />
+        </div>
       </>
     );
   } else if (accountKnown && profile) {
     const saved = shownContact(profile.contact, profile.contactKind);
     businessBlock = (
-      <div style={{ border: `1px solid ${GOLD}`, background: "#FDF6E7", borderRadius: 10, padding: "10px 14px", fontSize: 15, lineHeight: 1.4, margin: "0 0 16px", display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 10 }}>
+      <div style={{ borderTop: `1px solid ${color.line}`, borderBottom: `1px solid ${color.line}`, padding: "14px 0", margin: "0 0 24px", display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 12 }}>
         <span style={{ flex: "1 1 160px", minWidth: 0, overflowWrap: "anywhere" }}>
-          From <b>{profile.businessName}</b>
+          <span style={{ display: "block", fontSize: 15, lineHeight: 1.4 }}>
+            From <b style={{ fontWeight: 600 }}>{profile.businessName}</b>
+          </span>
           {saved && (
-            <>
-              {" · "}
+            <span style={{ display: "block", ...text.small, color: color.muted, marginTop: 2 }}>
               {/* The icon is glued to the first letter, so it never ends a line on its own. */}
               <span style={{ whiteSpace: "nowrap" }}>
                 {saved.kind && <><ContactIcon kind={saved.kind} size={16} label={CONTACT_LABEL[saved.kind]} />{"\u00a0"}</>}
                 {Array.from(saved.text)[0]}
               </span>
               {Array.from(saved.text).slice(1).join("")}
-            </>
+            </span>
           )}
         </span>
-        <button type="button" onClick={() => openBusinessEditor(saved ? "name" : "contact")} style={linkButton}>
+        <button type="button" onClick={() => openBusinessEditor(saved ? "name" : "contact")} className="mmv-link">
           {saved ? "Change" : "Add Instagram, WhatsApp or website"}
         </button>
       </div>
     );
   }
 
+  // Space below each status line and note under the photo.
+  const statusGap = { margin: "0 0 12px" };
   let cutStatus: React.ReactNode = null;
   if (cut) {
     switch (cut.stage) {
       case "loading":
-        cutStatus = <p style={{ margin: "4px 0 8px" }}>Getting the cut-out tool ready…</p>;
+        cutStatus = <p className="mmv-status mmv-status--wait" style={statusGap}><span className="mmv-spin" />Getting the cut-out tool ready…</p>;
         break;
       case "download":
-        cutStatus = <p style={{ margin: "4px 0 8px" }}>Getting the cut-out tool ready (first time only, about 100 MB)… {Math.round(cut.fraction * 100)}%</p>;
+        cutStatus = (
+          <p className="mmv-status mmv-status--wait" style={statusGap}>
+            <span className="mmv-spin" />
+            <span>Getting the cut-out tool ready (first time only, about 100 MB)… <span className="mmv-num">{Math.round(cut.fraction * 100)}%</span></span>
+          </p>
+        );
         break;
       case "cutting":
         cutStatus = (
-          <p style={{ margin: "4px 0 8px" }}>
-            Cutting out your {noun} in the background<Seconds from={cut.startedAt} />. Keep typing.
+          <p className="mmv-status mmv-status--wait" style={statusGap}>
+            <span className="mmv-spin" />
+            <span>Cutting out your {noun} in the background<Seconds from={cut.startedAt} />. Keep typing.</span>
           </p>
         );
         break;
       case "done":
         cutStatus = (
           <>
-            <p style={{ margin: "4px 0 8px" }}>Cut-out ready ✓</p>
+            <p className="mmv-status mmv-status--done" style={statusGap}><Icon name="check" size={16} />Cut-out ready</p>
             {cut.cut.touchesEdge && (
-              <p style={note}>Part of your {noun} looks cut off. Retake it with the whole {noun} in frame for the best {greeting ? "greeting" : "ads"}.</p>
+              <p className="mmv-note mmv-note--caution" style={statusGap}>
+                <Icon name="alert" />
+                <span>Part of your {noun} looks cut off. Retake it with the whole {noun} in frame for the best {greeting ? "greeting" : "ads"}.</span>
+              </p>
             )}
           </>
         );
         break;
       case "bad":
         cutStatus = (
-          <p style={note}>
-            We couldn't cleanly cut out the {noun}. A photo with the whole {noun} and a plain background works best.
-            {greeting ? "" : " You can still continue: your ads will use the photo as it is."}
+          <p className="mmv-note mmv-note--caution" style={statusGap}>
+            <Icon name="alert" />
+            <span>
+              We couldn't cleanly cut out the {noun}. A photo with the whole {noun} and a plain background works best.
+              {greeting ? "" : " You can still continue: your ads will use the photo as it is."}
+            </span>
           </p>
         );
         break;
       case "failed":
-        cutStatus = <p style={{ margin: "4px 0 0" }}>The cut-out tool didn't finish downloading. Check your internet.</p>;
+        cutStatus = <p className="mmv-status" style={{ margin: "0 0 4px" }}>The cut-out tool didn't finish downloading. Check your internet.</p>;
         break;
     }
   }
 
   const photoBlock = (
-    <div ref={photoRef} role="group" aria-labelledby="photo-label" style={{ position: "relative", marginBottom: 6, scrollMarginTop: 8 }}>
-      <p id="photo-label" style={{ margin: 0, fontWeight: 600 }}>{greeting ? `Photo of your ${noun} (optional)` : `Photo of your ${noun}`}</p>
+    <div ref={photoRef} role="group" aria-labelledby="photo-label" style={{ position: "relative", marginBottom: 24, scrollMarginTop: 8 }}>
+      <p id="photo-label" className="mmv-label" style={{ margin: "0 0 4px" }}>{greeting ? <>{`Photo of your ${noun} `}<span className="mmv-opt">(optional)</span></> : `Photo of your ${noun}`}</p>
       <PhotoTip industry={industry} />
       {preview ? (
         <>
-          <img src={preview} alt="Your photo" style={{ display: "block", width: "100%", maxHeight: 220, objectFit: "contain", background: "#f4f5f7", borderRadius: 8 }} />
-          <div style={{ display: "flex", flexWrap: "wrap", columnGap: 20, margin: "2px 0 4px" }}>
-            <button type="button" ref={retakeRef} onClick={() => choosePhoto(cameraRef.current)} style={linkButton}>Retake</button>
-            <button type="button" onClick={() => choosePhoto(galleryRef.current)} style={linkButton}>Choose another</button>
-            {greeting && <button type="button" onClick={clearPhoto} style={linkButton}>Remove photo</button>}
+          <div key={photoKey} className="mmv-frame">
+            {CORNERS.map((c) => <span key={c} aria-hidden="true" className={`mmv-corner mmv-corner--${c}`} />)}
+            <img src={preview} alt="Your photo" style={{ display: "block", maxWidth: "100%", maxHeight: 240, width: "auto", height: "auto", margin: "0 auto", objectFit: "contain", borderRadius: 8 }} />
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", columnGap: 20, margin: "4px 0 8px" }}>
+            <button type="button" ref={retakeRef} onClick={() => choosePhoto(cameraRef.current)} className="mmv-link">Retake</button>
+            <button type="button" onClick={() => choosePhoto(galleryRef.current)} className="mmv-link">Choose another</button>
+            {greeting && <button type="button" onClick={clearPhoto} className="mmv-link">Remove photo</button>}
           </div>
           <div aria-live="polite">
             {warnings.length > 0 && (
-              <div style={{ ...note, margin: "0 0 10px" }}>
-                <b style={{ display: "block", marginBottom: 4 }}>Quick check on this photo</b>
-                <ul style={{ margin: "0 0 6px", paddingLeft: 20 }}>
-                  {warnings.map((w) => <li key={w.id}>{w.message}</li>)}
-                </ul>
-                <span style={{ color: MUTED }}>You can still continue.</span>
+              <div className="mmv-note mmv-note--caution" style={{ margin: "0 0 12px" }}>
+                <Icon name="alert" />
+                <div style={{ minWidth: 0 }}>
+                  <b style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>Quick check on this photo</b>
+                  <ul style={{ margin: "0 0 6px", paddingLeft: 20 }}>
+                    {warnings.map((w) => <li key={w.id}>{w.message}</li>)}
+                  </ul>
+                  <span style={{ color: color.muted }}>You can still continue.</span>
+                </div>
               </div>
             )}
           </div>
-          <div role="status" style={{ fontSize: 14, lineHeight: 1.4, color: INK }}>{cutStatus}</div>
+          <div role="status">{cutStatus}</div>
           {cut?.stage === "failed" && file && (
-            <button type="button" onClick={() => setRun(startCutout(file))} style={{ ...linkButton, fontSize: 14, marginBottom: 6 }}>Try again</button>
+            <button type="button" onClick={() => setRun(startCutout(file))} className="mmv-btn2 mmv-btn2--sm" style={{ margin: "8px 0 12px" }}>Try again</button>
           )}
         </>
       ) : (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-          <button type="button" ref={takeRef} onClick={() => choosePhoto(cameraRef.current)} style={{ ...pickButton, background: INK, color: "#fff" }}>
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={AMBER} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-              <circle cx="12" cy="13" r="3.5" />
-            </svg>
-            Take a photo
-          </button>
-          <button type="button" onClick={() => choosePhoto(galleryRef.current)} style={{ ...pickButton, background: "#fff", color: INK }}>
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="5" width="18" height="14" rx="2" />
-              <path d="M3 16l5-5 4 4 3-3 6 6" />
-              <circle cx="16" cy="9" r="1.5" />
-            </svg>
-            Choose from gallery
-          </button>
+        <div key={photoKey} className="mmv-frame" style={{ marginBottom: 12 }}>
+          {CORNERS.map((c) => <span key={c} aria-hidden="true" className={`mmv-corner mmv-corner--${c}`} />)}
+          <div className="mmv-picks">
+            <button type="button" ref={takeRef} onClick={() => choosePhoto(cameraRef.current)} className="mmv-pick-tile">
+              <Icon name="camera" size={24} />
+              Take a photo
+            </button>
+            <button type="button" onClick={() => choosePhoto(galleryRef.current)} className="mmv-pick-tile">
+              <Icon name="image" size={24} />
+              Choose from gallery
+            </button>
+          </div>
         </div>
       )}
-      <div role="status" style={{ fontSize: 14, lineHeight: 1.4, color: INK }}>
-        {shrinking && <p style={{ margin: "0 0 10px" }}>Getting your photo ready…</p>}
+      <div role="status">
+        {shrinking && <p className="mmv-status mmv-status--wait" style={statusGap}><span className="mmv-spin" />Getting your photo ready…</p>}
       </div>
       <input ref={cameraRef} type="file" accept={ACCEPT} capture="environment" onChange={onPicked} tabIndex={-1} aria-hidden="true" style={offscreen} />
       <input ref={galleryRef} type="file" accept={ACCEPT} onChange={onPicked} tabIndex={-1} aria-hidden="true" style={offscreen} />
-      {photoError && <p role="alert" style={{ color: "crimson", fontSize: 15, margin: "0 0 10px" }}>{photoError}</p>}
+      {photoError && <p role="alert" className="mmv-error" style={statusGap}><Icon name="alert" size={18} />{photoError}</p>}
       <PhotoGuide industry={industry} openSignal={guideSignal} />
     </div>
   );
@@ -884,56 +848,55 @@ export default function NewAd({
   const greetingFields = (
     <>
       {businessBlock}
-      <div role="radiogroup" aria-labelledby="greeting-line-label" style={{ marginBottom: line === OWN ? 4 : 18 }}>
-        <span id="greeting-line-label" style={groupLabel}>Greeting</span>
+      <div role="radiogroup" aria-labelledby="greeting-line-label" style={{ margin: line === OWN ? "0 0 12px" : "0 0 24px" }}>
+        <span id="greeting-line-label" className="mmv-label">Greeting</span>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {[...SEASON.greetingOptions, OWN].map((option) => (
-            <label key={option} className="mmv-chip" style={{ position: "relative", display: "inline-flex", maxWidth: "100%" }}>
-              <input type="radio" name="greeting-line" value={option} checked={line === option} onChange={() => setLine(option)} style={offscreen} />
-              <span lang={langOf(option)} style={chip(line === option)}>{option === OWN ? "Write your own" : option}</span>
+            <label key={option} className="mmv-chip">
+              <input type="radio" name="greeting-line" value={option} checked={line === option} onChange={() => setLine(option)} />
+              <span lang={langOf(option)}>{option === OWN ? "Write your own" : option}</span>
             </label>
           ))}
         </div>
       </div>
       {line === OWN && (
-        <div style={{ marginTop: 10 }}>
-          <label htmlFor="greeting-own">Your greeting</label>
-          <input id="greeting-own" ref={ownRef} value={ownLine} onChange={(e) => setOwnLine(e.target.value)} maxLength={HEADLINE_MAX} placeholder="Happy Diwali from all of us" style={input} />
+        <div className="mmv-field">
+          <label htmlFor="greeting-own" className="mmv-label">Your greeting</label>
+          <input id="greeting-own" ref={ownRef} value={ownLine} onChange={(e) => setOwnLine(e.target.value)} maxLength={HEADLINE_MAX} placeholder="Happy Diwali from all of us" className="mmv-input" />
         </div>
       )}
 
-      <label htmlFor="greeting-message" style={{ fontWeight: 600 }}>Your message</label>
-      <textarea
-        id="greeting-message"
-        ref={messageRef}
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        maxLength={SEASON.messageMax}
-        rows={3}
-        aria-describedby={near ? "greeting-message-count" : undefined}
-        style={{ ...input, margin: "6px 0 4px", resize: "vertical", lineHeight: 1.4 }}
-      />
-      {near && (
-        <p id="greeting-message-count" style={{ margin: "0 0 4px", fontSize: 13, textAlign: "right", color: veryNear ? MAROON : MUTED, fontWeight: veryNear ? 600 : 400 }}>
-          {message.length} of {SEASON.messageMax} characters
-        </p>
-      )}
-      <div style={{ margin: "0 0 14px" }}>
-        <button type="button" onClick={nextMessage} style={linkButton}>Try another message</button>
+      <div className="mmv-field" style={{ margin: "0 0 8px" }}>
+        <label htmlFor="greeting-message" className="mmv-label">Your message</label>
+        <textarea
+          id="greeting-message"
+          ref={messageRef}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          maxLength={SEASON.messageMax}
+          rows={3}
+          aria-describedby={near ? "greeting-message-count" : undefined}
+          className="mmv-input"
+        />
+        {near && (
+          <p id="greeting-message-count" className="mmv-num" style={{ ...text.small, margin: "8px 0 0", textAlign: "right", color: veryNear ? color.danger : color.muted, fontWeight: veryNear ? 600 : 400 }}>
+            {message.length} of {SEASON.messageMax} characters
+          </p>
+        )}
+      </div>
+      <div style={{ margin: "0 0 24px" }}>
+        <button type="button" onClick={nextMessage} className="mmv-link">Try another message</button>
       </div>
 
       {photoShown ? (
         photoBlock
       ) : (
-        <div style={{ marginBottom: 14 }}>
-          <button
-            type="button"
-            onClick={openPhoto}
-            style={{ display: "block", width: "100%", minHeight: 48, padding: "12px 16px", fontSize: 16, fontWeight: 600, fontFamily: "inherit", border: `2px solid ${INK}`, background: "#fff", color: INK, borderRadius: 10, cursor: "pointer" }}
-          >
-            + Add a photo of your {noun} (optional)
+        <div>
+          <button type="button" onClick={openPhoto} className="mmv-btn2 mmv-btn2--block">
+            <Icon name="plus" />
+            Add a photo of your {noun} (optional)
           </button>
-          <p style={{ margin: "6px 0 0", fontSize: 14, color: MUTED, lineHeight: 1.4 }}>Your real {noun} on the festive background.</p>
+          <p style={{ ...text.small, color: color.muted, margin: "8px 0 24px" }}>Your real {noun} on the festive background.</p>
         </div>
       )}
     </>
@@ -950,16 +913,17 @@ export default function NewAd({
           {textField("finePrint", finePrint, setFinePrint, 200, { multiline: true })}
         </>
       ) : (
-        <div style={{ margin: "-6px 0 10px" }}>
+        <div style={{ margin: "0 0 24px" }}>
           <button
             type="button"
             onClick={() => {
               setShowExtras(true);
               requestAnimationFrame(() => validityRef.current?.focus());
             }}
-            style={linkButton}
+            className="mmv-link"
           >
-            + Add an end date or fine print (optional)
+            <Icon name="plus" size={18} />
+            Add an end date or fine print (optional)
           </button>
         </div>
       )}
@@ -969,9 +933,8 @@ export default function NewAd({
 
   return (
     <div ref={rootRef} style={{ scrollMarginTop: 8 }}>
-      <style>{CHIP_CSS}</style>
       <div style={{ display: view === "form" ? undefined : "none" }}>
-        <div role="radiogroup" aria-label="What to make" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
+        <div role="radiogroup" aria-label="What to make" className="mmv-seg mmv-seg--lg" style={{ margin: "8px 0 32px" }}>
           {(["greeting", "offer"] as const).map((k) => (
             <button
               key={k}
@@ -982,7 +945,6 @@ export default function NewAd({
               data-kind={k}
               onClick={() => chooseKind(k)}
               onKeyDown={onKindKey}
-              style={kindButton(kind === k)}
             >
               {k === "greeting" ? SEASON.label : "Offer ad"}
             </button>
@@ -992,13 +954,9 @@ export default function NewAd({
         <form onSubmit={make} noValidate aria-label={greeting ? SEASON.label : "Offer ad"}>
           {greeting ? greetingFields : offerFields}
 
-          <div style={{ position: "sticky", bottom: 0, zIndex: 2, background: "#fff", padding: "10px 0 calc(10px + env(safe-area-inset-bottom))", boxShadow: "0 -1px 0 #e3e6eb", marginTop: 8 }}>
-            {error && <p role="alert" style={{ color: "crimson", fontSize: 15, margin: "0 0 8px" }}>{error}</p>}
-            <button
-              type="submit"
-              disabled={!accountKnown}
-              style={{ width: "100%", minHeight: 52, padding: "12px 20px", fontSize: 17, fontWeight: 700, fontFamily: "inherit", background: AMBER, color: INK, border: "none", borderRadius: 10, cursor: accountKnown ? "pointer" : "default", opacity: accountKnown ? 1 : 0.6 }}
-            >
+          <div className="mmv-makebar">
+            {error && <p role="alert" className="mmv-error"><Icon name="alert" size={18} />{error}</p>}
+            <button type="submit" disabled={!accountKnown} className="mmv-btn">
               {submitLabel}
             </button>
           </div>
@@ -1024,24 +982,27 @@ export default function NewAd({
       )}
 
       {signedIn && jobs && jobs.length > 0 && (
-        <section style={{ marginTop: 32 }}>
-          <h2 style={{ fontSize: 18 }}>Saved greetings and offers</h2>
+        <section style={{ marginTop: 48, borderTop: `1px solid ${color.line}`, paddingTop: 32 }}>
+          <h2 style={{ ...text.heading, margin: "0 0 8px" }}>Saved greetings and offers</h2>
           {jobs.map((job) => {
             const label = job.kind === "greeting" ? "Greeting" : "Offer";
             const sub = job.kind === "greeting" ? job.message : [job.details, job.validity].filter(Boolean).join(" · ");
             return (
-              <div key={job._id} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+              <div key={job._id} style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${color.line}` }}>
                 {job.photoUrl ? (
-                  <img src={job.photoUrl} alt="" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />
+                  <img src={job.photoUrl} alt="" style={{ width: 72, height: 54, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
                 ) : job.kind === "greeting" ? (
                   <GreetingTile />
                 ) : (
-                  <span aria-hidden="true" style={{ width: 80, height: 60, borderRadius: 6, flexShrink: 0, background: "#f4f5f7" }} />
+                  <span aria-hidden="true" style={{ width: 72, height: 54, borderRadius: 8, flexShrink: 0, background: color.sunk }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={kindTag(job.kind)}>{label}</span>
-                  <b lang={langOf(job.headline)} style={{ display: "block", overflowWrap: "anywhere" }}>{job.headline}</b>
-                  {sub && <div style={{ color: "#666", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, lineHeight: 1.25, color: color.muted, marginBottom: 2 }}>
+                    <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: job.kind === "greeting" ? color.festive : color.accent }} />
+                    {label}
+                  </span>
+                  <b lang={langOf(job.headline)} style={{ display: "block", fontSize: 16, fontWeight: 600, lineHeight: 1.35, overflowWrap: "anywhere" }}>{job.headline}</b>
+                  {sub && <div style={{ ...text.small, color: color.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
                 </div>
                 {/* An offer whose photo is gone can't be drawn again. */}
                 {(job.kind === "greeting" || job.photoUrl) && (
@@ -1049,7 +1010,8 @@ export default function NewAd({
                     type="button"
                     onClick={() => openJob(job)}
                     aria-label={`Open ${label.toLowerCase()}: ${job.headline}`}
-                    style={{ minHeight: 44, minWidth: 64, padding: "8px 14px", border: `1px solid ${INK}`, borderRadius: 8, background: "#fff", color: INK, font: "inherit", fontSize: 15, cursor: "pointer", flexShrink: 0 }}
+                    className="mmv-btn2 mmv-btn2--sm"
+                    style={{ flex: "none" }}
                   >
                     Open
                   </button>

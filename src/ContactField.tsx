@@ -1,14 +1,8 @@
-import type { CSSProperties, RefObject } from "react";
+import type { RefObject } from "react";
 import { CONTACT_KINDS, INDUSTRIES, type ContactKind, type IndustryKey } from "../convex/industries";
 import { CONTACT_ICON, CONTACT_LABEL, guessContactKind } from "./contact";
 
-const INK = "#111317";
-const MUTED = "#5b6170";
 const INPUT_MODE: Record<ContactKind, "text" | "tel" | "url"> = { instagram: "text", whatsapp: "tel", website: "url" };
-// Icon beside the word; on phones narrower than 375px all three put the icon above the word, so none overflows.
-const KIND_CSS =
-  ".mmv-contact-kind{display:inline-flex;align-items:center;justify-content:center;gap:4px}" +
-  "@media (max-width:374px){.mmv-contact-kind{flex-direction:column;gap:2px}}";
 
 // The same icon the visuals draw. Named for screen readers when label is given, otherwise hidden.
 export function ContactIcon({ kind, size = 18, label }: { kind: ContactKind; size?: number; label?: string }) {
@@ -23,27 +17,11 @@ export function ContactIcon({ kind, size = 18, label }: { kind: ContactKind; siz
   );
 }
 
-// Same look as the greeting/offer switch on the form, a little smaller so three fit across a phone.
-function kindButton(selected: boolean): CSSProperties {
-  return {
-    minWidth: 0,
-    minHeight: 44,
-    padding: "6px 3px",
-    borderRadius: 10,
-    fontSize: 14,
-    fontFamily: "inherit",
-    lineHeight: 1.2,
-    color: INK,
-    cursor: "pointer",
-    border: selected ? `2px solid ${INK}` : "1px solid #d5d8de",
-    background: selected ? "#FFF6D6" : "#fff",
-    fontWeight: selected ? 600 : 400,
-  };
-}
-
-// "Where customers can find you": Instagram · WhatsApp · Website above one box, used by the maker
+// "Where customers can find you": Instagram, WhatsApp, Website above one box, used by the maker
 // form and Edit business. Until a button is tapped (picked), typing a number or a link picks the
-// matching kind by itself; after that only the buttons change it.
+// matching kind by itself; after that only the buttons change it. The caller wraps it in .mmv-field.
+// The buttons are the small segmented switch (.mmv-seg--sm); .mmv-contact-kind puts each icon beside
+// its word, or above it on phones narrower than 375px so none overflows.
 export default function ContactField({
   id,
   industry,
@@ -53,8 +31,6 @@ export default function ContactField({
   onContact,
   onKind,
   inputRef,
-  inputStyle,
-  hintStyle,
 }: {
   id: string;
   industry: IndustryKey;
@@ -65,8 +41,6 @@ export default function ContactField({
   // tapped: a button was used (by touch, click or arrow keys), not a guess from the typing.
   onKind: (kind: ContactKind, tapped: boolean) => void;
   inputRef?: RefObject<HTMLInputElement | null>;
-  inputStyle: CSSProperties;
-  hintStyle: CSSProperties;
 }) {
   const examples = INDUSTRIES[industry].contactExamples;
 
@@ -87,11 +61,10 @@ export default function ContactField({
 
   return (
     <>
-      <style>{KIND_CSS}</style>
-      <label htmlFor={id} style={{ display: "block", fontWeight: 600 }}>
-        Where customers can find you <span style={{ color: MUTED, fontWeight: 400 }}>· optional</span>
+      <label htmlFor={id} className="mmv-label">
+        Where customers can find you <span className="mmv-opt">(optional)</span>
       </label>
-      <div role="radiogroup" aria-label="Contact type" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginTop: 8 }}>
+      <div role="radiogroup" aria-label="Contact type" className="mmv-seg mmv-seg--sm">
         {CONTACT_KINDS.map((k) => (
           <button
             key={k}
@@ -103,7 +76,6 @@ export default function ContactField({
             onClick={() => onKind(k, true)}
             onKeyDown={onKey}
             className="mmv-contact-kind"
-            style={kindButton(kind === k)}
           >
             <ContactIcon kind={k} size={16} />
             {CONTACT_LABEL[k]}
@@ -122,9 +94,10 @@ export default function ContactField({
         autoCorrect="off"
         spellCheck={false}
         aria-describedby={`${id}-hint`}
-        style={{ ...inputStyle, marginTop: 8 }}
+        className="mmv-input"
+        style={{ marginTop: 8 }}
       />
-      <p id={`${id}-hint`} style={hintStyle}>
+      <p id={`${id}-hint`} className="mmv-hint">
         Shown on your greetings and ads with the {kind === "website" ? "website" : CONTACT_LABEL[kind]} icon.
       </p>
     </>

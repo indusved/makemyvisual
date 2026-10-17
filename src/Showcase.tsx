@@ -2,26 +2,20 @@ import { useState } from "react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../convex/_generated/api";
 import { INDUSTRIES, INDUSTRY_KEYS, SEASON, type IndustryKey } from "../convex/industries";
+import { color, text } from "./theme";
 
 export type ShowcaseItem = FunctionReturnType<typeof api.showcase.list>[number];
 export type MakeKind = ShowcaseItem["kind"];
 
-const INK = "#111317";
-const AMBER = "#F5B700";
-const MUTED = "#5b6170";
-const MAROON = "#6B1020";
-
 const KIND_LABEL: Record<MakeKind, string> = { greeting: SEASON.label, offer: "Offer ad" };
 
-const pill = (kind: MakeKind) => ({
-  display: "inline-block",
-  fontSize: 12,
-  fontWeight: 700,
-  lineHeight: 1.3,
-  borderRadius: 999,
-  padding: "2px 8px",
-  color: kind === "greeting" ? "#FFE9B8" : AMBER,
-  background: kind === "greeting" ? MAROON : INK,
+// The kind as plain text after a small dot: maroon for a greeting, gold for an offer. The words carry the meaning.
+const kindDot = (kind: MakeKind) => ({
+  flex: "none",
+  width: 6,
+  height: 6,
+  borderRadius: "50%",
+  background: kind === "greeting" ? color.festive : color.accent,
 });
 
 // One example image per vertical for the "What do you sell?" cards: only that vertical's own examples, the wanted kind first.
@@ -49,20 +43,24 @@ export function ShowcaseRow({ items, label, height = 260, showIndustry = false }
   if (shown.length === 0) return null;
 
   return (
+    // Keyed by the first example: switching greeting/offer reorders the row, and the browser would otherwise keep
+    // the old first image snapped, scrolling to the far end and cutting off the new first image.
     <div
+      key={shown[0].key}
       role="region"
       aria-label={label}
       tabIndex={0}
+      className="mmv-scroll"
       style={{
         display: "flex",
         alignItems: "flex-start",
         gap: 12,
         overflowX: "auto",
         scrollSnapType: "x mandatory",
-        scrollPaddingInline: 16,
+        scrollPaddingInline: 20,
         overscrollBehaviorX: "contain",
-        margin: "0 -16px",
-        padding: "4px 16px 14px",
+        margin: "0 -20px",
+        padding: "4px 20px 16px",
       }}
     >
       {shown.map((item, index) => {
@@ -83,17 +81,20 @@ export function ShowcaseRow({ items, label, height = 260, showIndustry = false }
                 width: "100%",
                 aspectRatio: String(ratio),
                 objectFit: "cover",
-                borderRadius: 10,
-                background: "#efedf0",
-                boxShadow: "0 0 0 1px rgba(17,19,23,0.08)",
+                borderRadius: 12,
+                background: color.sunk,
+                boxShadow: "0 0 0 1px rgba(26,24,20,.06)",
               }}
             />
             <figcaption style={{ marginTop: 8 }}>
-              <span style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 8px" }}>
-                <span style={pill(item.kind)}>{KIND_LABEL[item.kind]}</span>
-                {showIndustry && item.industry && <span style={{ fontSize: 13, color: MUTED }}>{INDUSTRIES[item.industry].chooserLabel}</span>}
+              <span style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "2px 12px", ...text.micro, color: color.muted }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
+                  <span aria-hidden="true" style={kindDot(item.kind)} />
+                  {KIND_LABEL[item.kind]}
+                </span>
+                {showIndustry && item.industry && <span>{INDUSTRIES[item.industry].chooserLabel}</span>}
               </span>
-              <span style={{ display: "block", fontSize: 14, lineHeight: 1.35, marginTop: 4, color: INK }}>{item.caption}</span>
+              <span style={{ display: "block", fontSize: 14, lineHeight: 1.4, marginTop: 4, color: color.ink }}>{item.caption}</span>
             </figcaption>
           </figure>
         );

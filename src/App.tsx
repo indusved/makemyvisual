@@ -6,39 +6,16 @@ import { BRAND, INDUSTRIES, SEASON, industryFromPath, productName, type Industry
 import SignIn, { hasPendingCode } from "./SignIn";
 import NewAd from "./NewAd";
 import { loadWords } from "./draft";
-import Brand, { Diya, Toran } from "./Brand";
+import Brand, { Diya } from "./Brand";
 import Onboarding, { ChangeVertical, VerticalCards, type BusinessDetails } from "./Onboarding";
 import { ShowcaseRow, exampleImages, examplesFor, type MakeKind } from "./Showcase";
 import { GREETING_SIZES } from "./adRenderer";
+import { Icon } from "./Icons";
+import { GLOBAL_CSS, color, layout, text } from "./theme";
 
-const INK = "#111317";
-const MUTED = "#5b6170";
-const MAROON = "#6B1020";
-const GOLD = "#E9B44C";
-const CREAM = "#FFF4E2";
-
-const heading = { margin: "0 0 12px" };
-const linkButton = {
-  background: "none",
-  border: "none",
-  padding: 0,
-  minHeight: 44,
-  font: "inherit",
-  color: "inherit",
-  textDecoration: "underline",
-  cursor: "pointer",
-};
-const sectionTitle = { fontSize: 18, margin: "0 0 6px" };
-const festiveNote = {
-  display: "flex",
-  gap: 12,
-  alignItems: "flex-start",
-  background: "#FFF7E8",
-  border: `1px solid ${GOLD}`,
-  borderLeft: `4px solid ${MAROON}`,
-  borderRadius: 10,
-  padding: "12px 14px",
-};
+const muted15 = { color: color.muted, fontSize: 15, lineHeight: 1.45 };
+// The line between sections: 48px of space either side.
+const divider = { border: 0, borderTop: `1px solid ${color.line}`, margin: "48px 0" };
 
 // The season's badge on the "What do you sell?" cards.
 const SEASON_BADGES: Partial<Record<IndustryKey, string>> = { gifting: "Diwali season" };
@@ -52,6 +29,16 @@ const tagline = (industry: IndustryKey, kind: MakeKind) =>
   kind === "greeting"
     ? `Make your ${INDUSTRIES[industry].businessNoun}'s Diwali greeting with your name on it, ready for WhatsApp, Instagram, email and print. ${SEASON.dateLabel}.`
     : INDUSTRIES[industry].tagline;
+
+// The logo with "Loading…" under it, while the sign-in or the saved business is still being checked.
+function Loading() {
+  return (
+    <>
+      <h1 style={{ margin: "0 0 12px" }}><Brand showSuffix={false} size={24} /></h1>
+      <p style={{ ...muted15, margin: 0 }}>Loading…</p>
+    </>
+  );
+}
 
 // Moves focus to a section and scrolls it to the top, smoothly unless reduced motion is on.
 function scrollToSection(id: string) {
@@ -98,16 +85,15 @@ export default function App() {
   }, [goTo]);
 
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", color: INK, maxWidth: 560, margin: "20px auto 64px", padding: "0 16px" }}>
+    // Font and text colour come from GLOBAL_CSS on <body>. The side padding grows past the notch in landscape.
+    <main style={{ maxWidth: layout.maxWidth, margin: "0 auto", padding: `${layout.top}px max(${layout.gutter}px, env(safe-area-inset-right)) ${layout.bottom}px max(${layout.gutter}px, env(safe-area-inset-left))` }}>
+      <style>{GLOBAL_CSS}</style>
       {urlIndustry ? (
         // The same page in the same place for guests, loading and signed in, so the maker inside keeps
         // everything typed and made when someone signs in.
         <VerticalPage industry={urlIndustry} signedIn={signedIn} goTo={goTo} kind={makeKind} onKind={chooseKind} />
       ) : signedIn === undefined ? (
-        <>
-          <h1 style={heading}><Brand showSuffix={false} /></h1>
-          <p>Loading…</p>
-        </>
+        <Loading />
       ) : signedIn ? (
         <SignedInHome goTo={goTo} kind={makeKind} />
       ) : (
@@ -122,7 +108,7 @@ function GreetingSizes() {
   return (
     <ul
       aria-label="Sizes you get"
-      style={{ listStyle: "none", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: "12px 8px", maxWidth: 360, padding: 0, margin: "0 0 22px" }}
+      style={{ listStyle: "none", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: "12px 4px", maxWidth: 360, padding: 0, margin: "0 0 24px" }}
     >
       {GREETING_SIZES.map((s) => (
         <li key={s.key} title={s.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
@@ -131,13 +117,13 @@ function GreetingSizes() {
             style={{
               width: Math.round(s.width * scale),
               height: Math.round(s.height * scale),
-              border: `1.5px solid ${GOLD}`,
+              border: `1.25px solid ${color.lineStrong}`,
               borderRadius: 3,
-              background: "rgba(233,180,76,0.14)",
+              background: color.sunk,
               boxSizing: "border-box",
             }}
           />
-          <span style={{ fontSize: 12, color: CREAM, whiteSpace: "nowrap" }}>{SHORT_SIZE_NAMES[s.key] ?? s.label}</span>
+          <span style={{ ...text.micro, color: color.muted, whiteSpace: "nowrap" }}>{SHORT_SIZE_NAMES[s.key] ?? s.label}</span>
         </li>
       ))}
     </ul>
@@ -153,77 +139,55 @@ function Landing({ kind, onKind }: { kind: MakeKind; onKind: (kind: MakeKind) =>
 
   return (
     <>
-      <h1 style={{ margin: "0 0 20px" }}><Brand showSuffix={false} size={32} /></h1>
+      <h1 style={{ margin: "0 0 32px" }}><Brand showSuffix={false} size={24} /></h1>
 
-      <section
-        aria-labelledby="season-title"
-        style={{
-          borderRadius: 16,
-          overflow: "hidden",
-          color: CREAM,
-          background: `radial-gradient(120% 70% at 50% 0%, #8A1C30 0%, ${MAROON} 55%, #4E0B17 100%)`,
-          margin: "0 0 32px",
-        }}
-      >
-        <Toran />
-        <div style={{ padding: "14px 20px 22px" }}>
-          <p style={{ display: "flex", alignItems: "center", gap: 8, color: GOLD, fontSize: 15, fontWeight: 600, margin: "0 0 10px" }}>
-            <Diya size={22} />
-            {SEASON.dateLabel}
-          </p>
-          <h2 id="season-title" style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.15, letterSpacing: "-0.01em", color: "#FFFFFF", margin: "0 0 12px" }}>
-            Your business's Diwali greeting, ready in 2 minutes
-          </h2>
-          <p style={{ fontSize: 16, lineHeight: 1.5, margin: "0 0 20px" }}>
-            Thank your customers with a greeting that carries your name. Send it on WhatsApp, Instagram or email, or print it as a card for your gift boxes.
-          </p>
-          <GreetingSizes />
-          <button
-            type="button"
-            onClick={() => pick("greeting")}
-            style={{
-              display: "block",
-              width: "100%",
-              maxWidth: 320,
-              minHeight: 50,
-              padding: "12px 20px",
-              fontSize: 17,
-              fontWeight: 700,
-              color: INK,
-              background: GOLD,
-              border: "none",
-              borderRadius: 10,
-              cursor: "pointer",
-            }}
-          >
-            Make a Diwali greeting
-          </button>
-          <button type="button" onClick={() => pick("offer")} style={{ ...linkButton, marginTop: 8, fontSize: 15, textAlign: "left" }}>
-            Making a sale or offer ad? Choose what you sell
-          </button>
-        </div>
+      <section aria-labelledby="season-title">
+        <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: color.festive, margin: "0 0 12px" }}>
+          <Diya size={18} />
+          {SEASON.dateLabel}
+        </p>
+        <h2 id="season-title" style={{ ...text.display, color: color.ink, margin: "0 0 12px" }}>
+          Your business's Diwali greeting, ready in 2 minutes
+        </h2>
+        <p style={{ ...text.bodyLg, color: color.ink2, maxWidth: "34em", margin: "0 0 24px" }}>
+          Thank your customers with a greeting that carries your name. Send it on WhatsApp, Instagram or email, or print it as a card for your gift boxes.
+        </p>
+        <GreetingSizes />
+        <button type="button" onClick={() => pick("greeting")} className="mmv-btn" style={{ maxWidth: 360 }}>
+          Make a Diwali greeting
+        </button>
+        <button type="button" onClick={() => pick("offer")} className="mmv-link" style={{ marginTop: 8 }}>
+          Making a sale or offer ad? Choose what you sell
+        </button>
       </section>
 
+      <hr style={divider} />
+
       {showcase && showcase.some((i) => i.url) && (
-        <section aria-labelledby="examples-title" style={{ margin: "0 0 28px" }}>
-          <h2 id="examples-title" style={sectionTitle}>Examples</h2>
-          <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 12px" }}>Made with sample photos. Yours will use your own photo, or no photo for a greeting.</p>
-          <ShowcaseRow items={showcase} label="Example greetings and ads" showIndustry />
-        </section>
+        <>
+          <section aria-labelledby="examples-title">
+            <h2 id="examples-title" style={{ ...text.heading, margin: "0 0 4px" }}>Examples</h2>
+            <p style={{ ...muted15, margin: "0 0 16px" }}>Made with sample photos. Yours will use your own photo, or no photo for a greeting.</p>
+            <ShowcaseRow items={showcase} label="Example greetings and ads" showIndustry />
+          </section>
+          <hr style={divider} />
+        </>
       )}
 
-      <h2 id="home-vertical" tabIndex={-1} style={{ ...sectionTitle, outline: "none", scrollMarginTop: 16 }}>What do you sell?</h2>
+      <h2 id="home-vertical" tabIndex={-1} style={{ ...text.title, margin: 0, outline: "none", scrollMarginTop: 16 }}>What do you sell?</h2>
       <div aria-live="polite">
         {kind === "greeting" ? (
-          <div style={{ ...festiveNote, alignItems: "center", flexWrap: "wrap", columnGap: 10, rowGap: 0, padding: "6px 14px", margin: "8px 0 14px" }}>
-            <Diya size={22} />
-            <span style={{ flex: "1 1 200px", lineHeight: 1.4, padding: "6px 0" }}>
-              <b>Making a Diwali greeting.</b> Pick what you sell to start.
-            </span>
-            <button type="button" onClick={() => onKind("offer")} style={{ ...linkButton, fontSize: 15 }}>Make an offer ad instead</button>
+          <div className="mmv-note" style={{ margin: "12px 0 20px" }}>
+            <Diya size={20} />
+            <div style={{ minWidth: 0 }}>
+              <span style={{ display: "block" }}>
+                <b>Making a Diwali greeting.</b> Pick what you sell to start.
+              </span>
+              <button type="button" onClick={() => onKind("offer")} className="mmv-link" style={{ marginBottom: -10 }}>Make an offer ad instead</button>
+            </div>
           </div>
         ) : (
-          <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 14px" }}>
+          <p style={{ ...muted15, margin: "4px 0 20px" }}>
             Pick one to start. Your real photo goes on every visual, never an AI-made copy.
           </p>
         )}
@@ -239,14 +203,13 @@ function SetupChooser({ kind, onPick }: { kind: MakeKind; onPick: (industry: Ind
   return <VerticalCards labelledBy="setup-vertical" onPick={onPick} images={exampleImages(showcase, kind)} badges={SEASON_BADGES} />;
 }
 
-// One muted line: who is signed in (or their business), then the account links.
+// One quiet line: who is signed in (or their business), then the account links, spaced apart.
 function AccountLine({ children }: { children: ReactNode }) {
   const { signOut } = useAuthActions();
   return (
-    <div style={{ color: MUTED, fontSize: 14, display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 6, margin: "0 0 16px" }}>
+    <div style={{ ...muted15, display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 16, minHeight: 44, margin: "0 0 24px" }}>
       {children}
-      <span aria-hidden="true">·</span>
-      <button type="button" onClick={() => void signOut()} style={linkButton}>Sign out</button>
+      <button type="button" onClick={() => void signOut()} className="mmv-link mmv-link--muted">Sign out</button>
     </div>
   );
 }
@@ -262,23 +225,16 @@ function SignedInHome({ goTo, kind }: { goTo: (industry: IndustryKey | null) => 
     if (savedIndustry) goTo(savedIndustry);
   }, [savedIndustry, goTo]);
 
-  if (profile !== null) {
-    return (
-      <>
-        <h1 style={heading}><Brand showSuffix={false} /></h1>
-        <p>Loading…</p>
-      </>
-    );
-  }
+  if (profile !== null) return <Loading />;
 
   return (
     <>
-      <h1 style={heading}><Brand showSuffix={false} /></h1>
+      <h1 style={{ margin: "0 0 12px" }}><Brand showSuffix={false} size={22} /></h1>
       <AccountLine>
         <span style={{ overflowWrap: "anywhere" }}>{viewer?.email ?? "…"}</span>
       </AccountLine>
-      <h2 id="setup-vertical" style={{ fontSize: 20, margin: "0 0 6px" }}>What do you sell?</h2>
-      <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 18px" }}>
+      <h2 id="setup-vertical" style={{ ...text.title, margin: 0 }}>What do you sell?</h2>
+      <p style={{ ...muted15, margin: "8px 0 24px" }}>
         {kind === "greeting"
           ? "Pick one. Your Diwali greeting wording, photo tips and ad backgrounds will be made for it. You can change it later."
           : "Pick one. Your backgrounds, photo tips and ad wording will be made for it. You can change it later."}
@@ -354,11 +310,11 @@ function VerticalPage({
 
   return (
     <>
-      <h1 style={{ margin: "0 0 8px" }}>{view === "change" ? <Brand showSuffix={false} size={24} /> : <Brand industry={industry} size={24} />}</h1>
+      <h1 style={{ margin: "0 0 12px" }}>{view === "change" ? <Brand showSuffix={false} size={22} /> : <Brand industry={industry} size={22} />}</h1>
 
       {signedIn === false && (
         <>
-          <p style={{ fontSize: 15, lineHeight: 1.45, margin: "0 0 8px" }}>
+          <p style={{ ...text.bodyLg, color: color.ink2, margin: "0 0 8px" }}>
             {tagline(industry, kind)}
             {hasExamples && (
               <>
@@ -370,7 +326,7 @@ function VerticalPage({
                     e.preventDefault();
                     scrollToSection("examples");
                   }}
-                  style={{ color: INK, padding: "13px 0", whiteSpace: "nowrap" }}
+                  style={{ color: color.ink, padding: "13px 0", whiteSpace: "nowrap", textUnderlineOffset: 3 }}
                 >
                   See examples
                 </a>
@@ -381,14 +337,15 @@ function VerticalPage({
             type="button"
             aria-expanded={showSignIn}
             onClick={() => setShowSignIn((open) => !open)}
-            style={{ ...linkButton, display: "block", fontSize: 15, textAlign: "left", margin: "0 0 8px" }}
+            className="mmv-link"
+            style={{ display: "flex", width: "fit-content", margin: "0 0 8px" }}
           >
             Already have an account? Sign in
           </button>
           {showSignIn && (
-            <div style={{ border: "1px solid #e3e6eb", borderRadius: 12, padding: 14, margin: "0 0 16px" }}>
+            <div className="mmv-panel mmv-panel--signin" style={{ margin: "0 0 24px" }}>
               <SignIn heading="Sign in" intro="We'll email you a 6-digit code. Your saved greetings and ads come back." autoFocus />
-              <button type="button" onClick={() => setShowSignIn(false)} style={{ ...linkButton, fontSize: 15 }}>Cancel</button>
+              <button type="button" onClick={() => setShowSignIn(false)} className="mmv-link mmv-link--muted" style={{ marginTop: 8 }}>Cancel</button>
             </div>
           )}
         </>
@@ -398,20 +355,11 @@ function VerticalPage({
         <AccountLine>
           {profile ? (
             <>
-              <b style={{ color: INK, overflowWrap: "anywhere" }}>{profile.businessName}</b>
+              <b style={{ color: color.ink, fontWeight: 600, overflowWrap: "anywhere" }}>{profile.businessName}</b>
               {view === "ads" && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <button
-                    ref={editRef}
-                    type="button"
-                    onClick={() => setMode("edit")}
-                    disabled={saving}
-                    style={{ ...linkButton, cursor: saving ? "default" : "pointer" }}
-                  >
-                    Edit business
-                  </button>
-                </>
+                <button ref={editRef} type="button" onClick={() => setMode("edit")} disabled={saving} className="mmv-link mmv-link--muted">
+                  Edit business
+                </button>
               )}
             </>
           ) : (
@@ -421,17 +369,20 @@ function VerticalPage({
       )}
 
       {profile && movedFrom && movedFrom !== industry && (
-        <p role="status" style={{ ...festiveNote, display: "block", fontSize: 15, lineHeight: 1.45, margin: "0 0 16px" }}>
-          You're set up for {INDUSTRIES[profile.industry].chooserLabel}, so this is your {INDUSTRIES[profile.industry].chooserLabel} page. To make things
-          for {INDUSTRIES[movedFrom].chooserLabel}, use Edit business, then Change what you sell.
+        <p role="status" className="mmv-note" style={{ margin: "0 0 24px" }}>
+          <Icon name="info" />
+          <span>
+            You're set up for {INDUSTRIES[profile.industry].chooserLabel}, so this is your {INDUSTRIES[profile.industry].chooserLabel} page. To make things
+            for {INDUSTRIES[movedFrom].chooserLabel}, use Edit business, then Change what you sell.
+          </span>
         </p>
       )}
 
       {/* Kept mounted (hidden) while choosing a vertical, so Cancel brings back any unsaved edits. */}
       {profile && view !== "ads" && (
         <div style={{ display: view === "edit" ? undefined : "none" }}>
-          <p style={{ color: MUTED, fontSize: 14, margin: "0 0 12px", overflowWrap: "anywhere" }}>
-            Signed in as <b style={{ color: INK }}>{viewer?.email ?? "…"}</b>
+          <p style={{ ...text.small, color: color.muted, margin: "0 0 16px", overflowWrap: "anywhere" }}>
+            Signed in as <b style={{ color: color.ink, fontWeight: 600 }}>{viewer?.email ?? "…"}</b>
           </p>
           <Onboarding
             industry={profile.industry}
@@ -474,14 +425,17 @@ function VerticalPage({
       {signedIn === false && (
         <>
           {hasExamples && (
-            <section id="examples" tabIndex={-1} aria-labelledby="examples-title" style={{ marginTop: 32, scrollMarginTop: 16, outline: "none" }}>
-              <h2 id="examples-title" style={sectionTitle}>Examples</h2>
-              <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 12px" }}>Made with sample photos. Yours uses your own photo, or no photo for a greeting.</p>
-              <ShowcaseRow items={examples} label={`Examples for ${config.chooserLabel}`} height={120} />
-            </section>
+            <>
+              <hr style={divider} />
+              <section id="examples" tabIndex={-1} aria-labelledby="examples-title" style={{ scrollMarginTop: 16, outline: "none" }}>
+                <h2 id="examples-title" style={{ ...text.heading, margin: "0 0 4px" }}>Examples</h2>
+                <p style={{ ...muted15, margin: "0 0 16px" }}>Made with sample photos. Yours uses your own photo, or no photo for a greeting.</p>
+                <ShowcaseRow items={examples} label={`Examples for ${config.chooserLabel}`} height={120} />
+              </section>
+            </>
           )}
-          <p style={{ marginTop: 32, fontSize: 14 }}>
-            <a href={"/" + makeSearch(kind)} style={{ color: MUTED, display: "inline-flex", alignItems: "center", minHeight: 44 }}>
+          <p style={{ margin: "32px 0 0" }}>
+            <a href={"/" + makeSearch(kind)} className="mmv-link mmv-link--muted" style={{ fontSize: 14 }}>
               Sell something else? Choose another
             </a>
           </p>

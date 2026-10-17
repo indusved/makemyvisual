@@ -4,108 +4,45 @@ import { ConvexError } from "convex/values";
 import { api } from "../convex/_generated/api";
 import { INDUSTRIES, INDUSTRY_KEYS, type ContactKind, type IndustryKey } from "../convex/industries";
 import { VerticalIcon } from "./Brand";
+import { CheckDisc, Icon } from "./Icons";
+import { color, text } from "./theme";
 import { guessContactKind, shownContact } from "./contact";
 import ContactField from "./ContactField";
 
 type Market = "IN" | "US";
 export type BusinessDetails = { market: Market; businessName: string; contact?: string; contactKind?: ContactKind };
 
-const INK = "#111317";
-const AMBER = "#F5B700";
-const MUTED = "#5b6170";
-
 const MARKETS: { key: Market; label: string }[] = [
   { key: "IN", label: "India" },
   { key: "US", label: "United States" },
 ];
 
-const input = { display: "block", width: "100%", padding: 12, fontSize: 16, margin: "6px 0 4px", boxSizing: "border-box" as const };
-const hint = { color: MUTED, fontSize: 13, margin: "0 0 18px" };
-const fieldset = { border: "none", padding: 0, margin: "0 0 22px", minWidth: 0 };
-const legend = { fontWeight: 600, padding: 0, marginBottom: 8 };
-// The one main action on a screen: amber and full width. Dimmed while it can't be pressed.
-function primary(disabled: boolean) {
-  return {
-    display: "block",
-    width: "100%",
-    minHeight: 52,
-    padding: "12px 20px",
-    fontSize: 17,
-    fontWeight: 700,
-    background: AMBER,
-    color: INK,
-    border: "none",
-    borderRadius: 10,
-    cursor: disabled ? "default" : "pointer",
-    opacity: disabled ? 0.55 : 1,
-  };
-}
-const radio = { width: 20, height: 20, margin: "1px 0 0", flexShrink: 0, accentColor: INK };
-const linkButton = {
-  background: "none",
-  border: "none",
-  padding: 0,
-  minHeight: 44,
-  font: "inherit",
-  color: "inherit",
-  textDecoration: "underline",
-  cursor: "pointer",
-};
+const fieldset = { border: "none", padding: 0, margin: "0 0 24px", minWidth: 0 };
+const radio = { width: 20, height: 20, margin: 0, flexShrink: 0, accentColor: color.ink };
+const muted15 = { color: color.muted, fontSize: 15, lineHeight: 1.45 };
 
-// Selected cards get a thicker amber border; padding shrinks by the same amount so nothing jumps.
+// A chosen market gets an ink edge plus an inset ring, so it looks 2px thick without anything shifting.
 function card(selected: boolean) {
   return {
     display: "flex",
     gap: 12,
-    alignItems: "flex-start",
-    minHeight: 44,
+    alignItems: "center",
+    minHeight: 52,
     boxSizing: "border-box" as const,
-    borderRadius: 10,
-    background: "#fff",
-    cursor: "pointer",
-    border: selected ? `3px solid ${AMBER}` : "1px solid #ccc",
-    padding: selected ? "12px 14px" : "14px 16px",
-  };
-}
-
-function verticalCard(selected: boolean) {
-  return {
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "flex-start",
-    gap: 10,
-    width: "100%",
-    minHeight: 150,
-    boxSizing: "border-box" as const,
-    margin: 0,
-    padding: selected ? 12 : 14,
-    border: selected ? `3px solid ${AMBER}` : "1px solid #ccc",
     borderRadius: 12,
-    background: "#fff",
-    color: INK,
-    font: "inherit",
-    textAlign: "left" as const,
-    textDecoration: "none",
+    padding: "14px 16px",
+    background: color.surface,
     cursor: "pointer",
+    border: `1px solid ${selected ? color.ink : color.lineStrong}`,
+    boxShadow: selected ? `inset 0 0 0 1px ${color.ink}` : "none",
   };
 }
 
-const badge = {
-  display: "inline-block",
-  fontSize: 12,
-  fontWeight: 700,
-  lineHeight: 1.3,
-  color: "#FFE9B8",
-  background: "#6B1020",
-  borderRadius: 999,
-  padding: "2px 8px",
-  marginTop: 8,
-};
-
-// Example image on a card, or the vertical's icon on a soft panel when it has none yet, so every card lines up.
-function CardMedia({ industry, url, badgeText }: { industry: IndustryKey; url?: string; badgeText?: string }) {
+// Example image on a card, or the vertical's icon on the sunk panel when it has none yet, so every card lines up
+// and has something to ring when chosen.
+function CardMedia({ industry, url, badgeText, chosen }: { industry: IndustryKey; url?: string; badgeText?: string; chosen: boolean }) {
   return (
-    <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "4 / 3", borderRadius: 8, overflow: "hidden", background: "#f3f1ee" }}>
+    <span className="mmv-media" style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", overflow: "hidden" }}>
       {url ? (
         <img src={url} alt="" decoding="async" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       ) : (
@@ -113,7 +50,25 @@ function CardMedia({ industry, url, badgeText }: { industry: IndustryKey; url?: 
           <VerticalIcon industry={industry} />
         </span>
       )}
-      {badgeText && <span style={{ ...badge, position: "absolute", top: 8, left: 8, margin: 0 }}>{badgeText}</span>}
+      {badgeText && (
+        <span
+          style={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            fontSize: 12,
+            fontWeight: 600,
+            lineHeight: 1.3,
+            padding: "3px 8px",
+            borderRadius: 999,
+            background: color.festive,
+            color: color.festiveText,
+          }}
+        >
+          {badgeText}
+        </span>
+      )}
+      {chosen && <CheckDisc style={{ position: "absolute", top: 8, right: 8 }} />}
     </span>
   );
 }
@@ -138,26 +93,25 @@ export function VerticalCards({
   badges?: Partial<Record<IndustryKey, string>>;
   hrefSearch?: string;
 }) {
-  const grid = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 };
-  const withMedia = Object.values(images ?? {}).some(Boolean);
+  const grid = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "24px 16px" };
   const cards = INDUSTRY_KEYS.filter((k) => INDUSTRIES[k].enabled).map((k) => {
     const body = (
       <>
-        {withMedia ? <CardMedia industry={k} url={images?.[k]} badgeText={badges?.[k]} /> : <VerticalIcon industry={k} />}
+        <CardMedia industry={k} url={images?.[k]} badgeText={badges?.[k]} chosen={selected === k} />
         <span>
-          <span style={{ display: "block", fontSize: 17, fontWeight: 700, lineHeight: 1.25 }}>{INDUSTRIES[k].chooserLabel}</span>
-          <span style={{ display: "block", color: MUTED, fontSize: 14, lineHeight: 1.35, marginTop: 4 }}>{INDUSTRIES[k].chooserDetail}</span>
+          <span style={{ display: "block", fontSize: 17, fontWeight: 600, lineHeight: 1.25 }}>{INDUSTRIES[k].chooserLabel}</span>
+          <span style={{ display: "block", color: color.muted, fontSize: 14, lineHeight: 1.4, marginTop: 4 }}>{INDUSTRIES[k].chooserDetail}</span>
           {current === k && <span style={{ display: "block", fontSize: 13, fontWeight: 600, marginTop: 6 }}>What you sell now</span>}
-          {!withMedia && badges?.[k] && <span style={badge}>{badges[k]}</span>}
         </span>
       </>
     );
+    // The ink ring comes from .mmv-choice plus aria-pressed, so these get no inline border or background.
     return onPick ? (
-      <button key={k} type="button" onClick={() => onPick(k)} disabled={disabled} aria-pressed={selected === undefined ? undefined : selected === k} style={verticalCard(selected === k)}>
+      <button key={k} type="button" onClick={() => onPick(k)} disabled={disabled} aria-pressed={selected === undefined ? undefined : selected === k} className="mmv-card mmv-choice">
         {body}
       </button>
     ) : (
-      <a key={k} href={"/" + INDUSTRIES[k].path + hrefSearch} style={verticalCard(false)}>
+      <a key={k} href={"/" + INDUSTRIES[k].path + hrefSearch} className="mmv-card mmv-choice">
         {body}
       </a>
     );
@@ -224,30 +178,27 @@ export default function Onboarding({
 
   return (
     <form onSubmit={submit}>
-      <h2 id="business-details" tabIndex={-1} style={{ fontSize: 20, margin: "0 0 6px", outline: "none" }}>{editing ? "Edit your business" : `Set up your ${config.businessNoun}`}</h2>
-      <p style={{ color: MUTED, margin: "0 0 4px" }}>
+      <h2 id="business-details" tabIndex={-1} style={{ ...text.title, margin: 0, outline: "none" }}>{editing ? "Edit your business" : `Set up your ${config.businessNoun}`}</h2>
+      <p style={{ ...muted15, margin: "8px 0 4px" }}>
         {editing
           ? "Changes show on the next ads you make."
           : greeting
             ? "Your name and contact go on your Diwali greeting, so customers know who it's from. You can change any of this later."
             : "Your name and contact go on every ad. You can change any of this later."}
       </p>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 6, fontSize: 14, color: MUTED, margin: "0 0 14px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 12, ...muted15, margin: "0 0 16px" }}>
         {editing ? (
           <>
             <span>
-              You sell: <b style={{ color: INK }}>{config.chooserLabel}</b>
+              You sell: <b style={{ color: color.ink, fontWeight: 600 }}>{config.chooserLabel}</b>
             </span>
             {onChangeVertical && (
-              <>
-                <span aria-hidden="true">·</span>
-                <button type="button" onClick={changeVertical} disabled={busy} style={linkButton}>Change what you sell</button>
-              </>
+              <button type="button" onClick={changeVertical} disabled={busy} className="mmv-link">Change what you sell</button>
             )}
           </>
         ) : (
           onChangeVertical && (
-            <button type="button" onClick={changeVertical} disabled={busy} style={linkButton}>
+            <button type="button" onClick={changeVertical} disabled={busy} className="mmv-link">
               Not {config.label}? Choose again
             </button>
           )
@@ -255,54 +206,61 @@ export default function Onboarding({
       </div>
 
       <fieldset style={fieldset}>
-        <legend style={legend}>Where are your customers?</legend>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <legend className="mmv-label" style={{ padding: 0 }}>Where are your customers?</legend>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
           {MARKETS.map((m) => (
-            <label key={m.key} style={{ ...card(market === m.key), alignItems: "center" }}>
-              <input type="radio" name="market" value={m.key} checked={market === m.key} onChange={() => setMarket(m.key)} style={{ ...radio, margin: 0 }} />
-              <span style={{ color: INK }}>{m.label}</span>
+            <label key={m.key} style={card(market === m.key)}>
+              <input type="radio" name="market" value={m.key} checked={market === m.key} onChange={() => setMarket(m.key)} style={radio} />
+              <span style={{ color: color.ink }}>{m.label}</span>
             </label>
           ))}
         </div>
       </fieldset>
 
-      <label htmlFor="businessName" style={{ fontWeight: 600 }}>Your {config.businessNoun}'s name</label>
-      <input
-        id="businessName"
-        value={businessName}
-        onChange={(e) => setBusinessName(e.target.value)}
-        required
-        maxLength={60}
-        autoComplete="organization"
-        placeholder={config.businessNamePlaceholder}
-        style={input}
-      />
-      <p style={hint}>Shown on {shownOn}.</p>
+      <div className="mmv-field">
+        <label htmlFor="businessName" className="mmv-label">Your {config.businessNoun}'s name</label>
+        <input
+          id="businessName"
+          value={businessName}
+          onChange={(e) => setBusinessName(e.target.value)}
+          required
+          maxLength={60}
+          autoComplete="organization"
+          placeholder={config.businessNamePlaceholder}
+          className="mmv-input"
+        />
+        <p className="mmv-hint">Shown on {shownOn}.</p>
+      </div>
 
-      <ContactField
-        id="contact"
-        industry={industry}
-        contact={contact}
-        kind={contactKind}
-        picked={contactPicked}
-        onContact={setContact}
-        onKind={(next, tapped) => {
-          setContactKind(next);
-          if (tapped) setContactPicked(true);
-        }}
-        inputStyle={input}
-        hintStyle={{ ...hint, marginBottom: 22 }}
-      />
+      <div className="mmv-field">
+        <ContactField
+          id="contact"
+          industry={industry}
+          contact={contact}
+          kind={contactKind}
+          picked={contactPicked}
+          onContact={setContact}
+          onKind={(next, tapped) => {
+            setContactKind(next);
+            if (tapped) setContactPicked(true);
+          }}
+        />
+      </div>
 
-      <button type="submit" disabled={busy} style={primary(busy)}>
+      <button type="submit" disabled={busy} className="mmv-btn">
         {busy ? "Saving…" : editing ? "Save changes" : greeting ? "Continue to your greeting" : "Continue"}
       </button>
       {onCancel && (
-        <button type="button" onClick={onCancel} disabled={busy} style={{ ...linkButton, display: "block", fontSize: 15, marginTop: 6 }}>
+        <button type="button" onClick={onCancel} disabled={busy} className="mmv-link mmv-link--muted" style={{ display: "block", marginTop: 8 }}>
           Cancel
         </button>
       )}
-      {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
+      {error && (
+        <p role="alert" className="mmv-error" style={{ marginTop: 12 }}>
+          <Icon name="alert" />
+          {error}
+        </p>
+      )}
     </form>
   );
 }
@@ -339,20 +297,25 @@ export function ChangeVertical({
 
   return (
     <section>
-      <h2 id="change-vertical" tabIndex={-1} style={{ fontSize: 20, margin: "0 0 6px", outline: "none" }}>Change what you sell</h2>
-      <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 18px" }}>
-        New ads will use the new category's backgrounds and photo tips, and will show <b style={{ color: INK }}>{details.businessName}</b>
+      <h2 id="change-vertical" tabIndex={-1} style={{ ...text.title, margin: 0, outline: "none" }}>Change what you sell</h2>
+      <p style={{ ...muted15, margin: "8px 0 24px" }}>
+        New ads will use the new category's backgrounds and photo tips, and will show <b style={{ color: color.ink, fontWeight: 600 }}>{details.businessName}</b>
         {details.contact && <> and {shownContact(details.contact, details.contactKind)?.text}</>}. Greetings and offers you saved for {INDUSTRIES[current].chooserLabel} are kept and show
         again if you switch back.
       </p>
       <VerticalCards labelledBy="change-vertical" onPick={setNext} selected={next} current={current} disabled={busy} />
-      <button type="button" onClick={() => void confirm()} disabled={busy || next === current} style={{ ...primary(busy || next === current), marginTop: 22 }}>
+      <button type="button" onClick={() => void confirm()} disabled={busy || next === current} className="mmv-btn" style={{ marginTop: 32 }}>
         {busy ? "Saving…" : next === current ? "Pick a new category" : `Switch to ${INDUSTRIES[next].chooserLabel}`}
       </button>
-      <button type="button" onClick={onCancel} disabled={busy} style={{ ...linkButton, display: "block", fontSize: 15, marginTop: 6 }}>
+      <button type="button" onClick={onCancel} disabled={busy} className="mmv-link mmv-link--muted" style={{ display: "block", marginTop: 8 }}>
         Cancel
       </button>
-      {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
+      {error && (
+        <p role="alert" className="mmv-error" style={{ marginTop: 12 }}>
+          <Icon name="alert" />
+          {error}
+        </p>
+      )}
     </section>
   );
 }

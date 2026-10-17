@@ -1,8 +1,8 @@
 import { useId, type ReactNode } from "react";
 import { BRAND, DEFAULT_INDUSTRY, INDUSTRIES, type IndustryKey } from "../convex/industries";
+import { color, fontStack } from "./theme";
 
-const INK = "#111317";
-const AMBER = "#F5B700";
+const AMBER = color.accent;
 const GOLD = "#E9B44C";
 const MARIGOLD = "#F28C1B";
 const LEAF = "#3F7A3A";
@@ -44,7 +44,7 @@ export function Toran({ height = 34 }: { height?: number }) {
 function Mark({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" style={{ flexShrink: 0 }}>
-      <rect width="32" height="32" rx="8" fill={INK} />
+      <rect width="32" height="32" rx="7" fill={color.ink} />
       <path d="M9 13V9h4M19 9h4v4M23 19v4h-4M13 23H9v-4" fill="none" stroke={AMBER} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="16" cy="16" r="2.6" fill={AMBER} />
     </svg>
@@ -81,7 +81,7 @@ const VERTICAL_ICONS: Partial<Record<IndustryKey, ReactNode>> = {
 export function VerticalIcon({ industry, size = 44 }: { industry: IndustryKey; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 44 44" aria-hidden="true" style={{ display: "block", flexShrink: 0 }}>
-      <rect width="44" height="44" rx="11" fill={INK} />
+      <rect width="44" height="44" rx="11" fill={color.ink} />
       <g transform="translate(7 7) scale(1.25)" fill="none" stroke={AMBER} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         {VERTICAL_ICONS[industry] ?? <path d="M5 9V5h4M15 5h4v4M19 15v4h-4M9 19H5v-4" />}
       </g>
@@ -101,16 +101,26 @@ export default function Brand({
   const suffix = INDUSTRIES[industry].brandSuffix;
   const [make, my, visual] = ["Make", "My", BRAND.slice("MakeMy".length)];
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: size * 0.4, flexWrap: "wrap" }} aria-label={showSuffix ? `${BRAND} ${suffix}` : BRAND}>
-      <Mark size={size * 1.3} />
-      <span style={{ fontSize: size, fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1, color: INK }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: size * 0.32, flexWrap: "wrap" }} aria-label={showSuffix ? `${BRAND} ${suffix}` : BRAND}>
+      <Mark size={size * 1.15} />
+      <span style={{ fontFamily: fontStack.display, fontSize: size, fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1, color: color.ink }}>
         {make}
-        <span style={{ fontWeight: 500 }}>{my}</span>
-        <span style={{ color: INK, background: AMBER, padding: "0 0.12em", marginLeft: "0.04em", borderRadius: 4 }}>{visual}</span>
+        <span style={{ fontWeight: 400 }}>{my}</span>
+        <span
+          style={{
+            fontWeight: 700,
+            background: color.accent,
+            padding: "0 0.14em",
+            marginLeft: "0.04em",
+            borderRadius: "0.18em",
+            boxDecorationBreak: "clone",
+            WebkitBoxDecorationBreak: "clone",
+          }}
+        >
+          {visual}
+        </span>
       </span>
-      {showSuffix && (
-        <span style={{ fontSize: size * 0.5, fontWeight: 600, color: "#5b6170", letterSpacing: "0.02em", textTransform: "uppercase" }}>{suffix}</span>
-      )}
+      {showSuffix && <span style={{ fontSize: size * 0.58, fontWeight: 500, lineHeight: 1.2, color: color.muted }}>{suffix}</span>}
     </span>
   );
 }

@@ -1,9 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-
-const INK = "#111317";
-const AMBER = "#F5B700";
-const MUTED = "#5b6170";
+import { Icon } from "./Icons";
+import { color, text } from "./theme";
 
 // The address a code was sent to, kept for this tab so a reload (or a trip to the email app) comes back to the code step.
 const PENDING_KEY = "mmv-signin";
@@ -42,32 +40,7 @@ export function hasPendingCode(): boolean {
   return readPending() !== null;
 }
 
-const input = { display: "block", width: "100%", padding: 12, fontSize: 16, margin: "8px 0 12px", boxSizing: "border-box" as const };
-const primary = {
-  display: "block",
-  width: "100%",
-  minHeight: 52,
-  padding: "12px 20px",
-  fontSize: 17,
-  fontWeight: 700,
-  background: AMBER,
-  color: INK,
-  border: "none",
-  borderRadius: 10,
-  cursor: "pointer",
-};
-const linkButton = {
-  background: "none",
-  border: "none",
-  padding: 0,
-  minHeight: 44,
-  font: "inherit",
-  fontSize: 15,
-  color: INK,
-  textDecoration: "underline",
-  cursor: "pointer",
-};
-
+// Looks come from the shared classes in theme.ts (GLOBAL_CSS): .mmv-btn while busy uses its disabled style.
 export default function SignIn({
   heading = "Sign in or create your account",
   intro = "We'll email you a 6-digit code. No password needed.",
@@ -196,9 +169,9 @@ export default function SignIn({
 
   return step === "email" ? (
     <form onSubmit={sendEmail}>
-      <h2 style={{ fontSize: 18, margin: "0 0 4px" }}>{heading}</h2>
-      <p style={{ color: MUTED, lineHeight: 1.45, margin: "0 0 16px" }}>{intro}</p>
-      <label htmlFor={ids + "email"}>Your email</label>
+      <h2 style={{ ...text.heading, margin: "0 0 4px" }}>{heading}</h2>
+      <p style={{ fontSize: 15, lineHeight: 1.45, color: color.muted, margin: "0 0 20px" }}>{intro}</p>
+      <label htmlFor={ids + "email"} className="mmv-label">Your email</label>
       <input
         ref={emailRef}
         id={ids + "email"}
@@ -211,18 +184,18 @@ export default function SignIn({
         autoCapitalize="none"
         autoComplete="email"
         required
-        style={input}
+        className="mmv-input"
       />
-      <button type="submit" disabled={busy} style={{ ...primary, cursor: busy ? "default" : "pointer" }}>{busy ? "Sending…" : "Send me a code"}</button>
-      {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
+      <button type="submit" disabled={busy} className="mmv-btn" style={{ marginTop: 16 }}>{busy ? "Sending…" : "Send me a code"}</button>
+      {error && <p role="alert" className="mmv-error" style={{ marginTop: 12 }}><Icon name="alert" size={18} />{error}</p>}
     </form>
   ) : (
     <form ref={formRef} onSubmit={(e) => void sendCode(e)}>
-      <p style={{ lineHeight: 1.45, margin: "0 0 6px", overflowWrap: "anywhere" }}>
+      <p style={{ fontSize: 15, lineHeight: 1.45, color: color.ink, margin: "0 0 6px", overflowWrap: "anywhere" }}>
         We sent a 6-digit code to <b>{email}</b>. It's also in the email's subject line, so you can read it from the notification.
       </p>
-      <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.45, margin: "0 0 12px" }}>It usually arrives within a minute. Not there? Check Spam or Promotions.</p>
-      <label htmlFor={ids + "code"}>Code</label>
+      <p style={{ ...text.small, color: color.muted, margin: "0 0 16px" }}>It usually arrives within a minute. Not there? Check Spam or Promotions.</p>
+      <label htmlFor={ids + "code"} className="mmv-label">Code</label>
       <input
         ref={codeRef}
         id={ids + "code"}
@@ -243,22 +216,22 @@ export default function SignIn({
         pattern="[0-9]*"
         maxLength={6}
         required
-        style={{ ...input, fontSize: 22, letterSpacing: "0.3em", textAlign: "center" }}
+        className="mmv-input mmv-input--code"
       />
-      <button type="submit" disabled={busy} style={{ ...primary, cursor: busy ? "default" : "pointer" }}>{busy ? "Checking…" : "Sign in"}</button>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 16, marginTop: 6 }}>
+      <button type="submit" disabled={busy} className="mmv-btn" style={{ marginTop: 16 }}>{busy ? "Checking…" : "Sign in"}</button>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 16, marginTop: 8 }}>
         <button
           type="button"
           onClick={() => void resend()}
           disabled={secondsLeft > 0 || resending}
-          style={{ ...linkButton, color: secondsLeft > 0 ? MUTED : INK, cursor: secondsLeft > 0 || resending ? "default" : "pointer" }}
+          className={secondsLeft > 0 ? "mmv-link mmv-link--muted mmv-num" : "mmv-link mmv-num"}
         >
           {secondsLeft > 0 ? `Send a new code in ${secondsLeft} s` : resending ? "Sending…" : "Send a new code"}
         </button>
-        <button type="button" onClick={changeEmail} disabled={busy} style={linkButton}>Use a different email</button>
+        <button type="button" onClick={changeEmail} disabled={busy} className="mmv-link">Use a different email</button>
       </div>
-      {note && <p role="status" style={{ color: MUTED, fontSize: 15, margin: "4px 0 0" }}>{note}</p>}
-      {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
+      {note && <p role="status" className="mmv-status mmv-status--done" style={{ marginTop: 8 }}><Icon name="check" size={16} />{note}</p>}
+      {error && <p role="alert" className="mmv-error" style={{ marginTop: 12 }}><Icon name="alert" size={18} />{error}</p>}
     </form>
   );
 }
