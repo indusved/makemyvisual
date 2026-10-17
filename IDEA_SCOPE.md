@@ -489,7 +489,8 @@ M6 — verify and submit, by Sun 18 Oct 11:00 AM IST (aim 9:00 AM). Outreach goe
 - Offer ads (5 sizes) and Diwali greetings (5 formats incl. 4×6 print card); real item cut out in the browser and placed, never AI-drawn; Share via the phone share sheet.
 - Email-code sign-in from hello@makemyvisual.com.
 - Contact type buttons (Instagram · WhatsApp · Website) with a matching icon on greetings and ads (live Sat 17 Oct; checked on the live greeting at phone width).
-- Premium-minimal UI refresh and animated per-category photo guides (live Sat 17 Oct ~09:15; checked on live at phone width: greeting made logged out, Download opened the email step, cars guide auto-played on first visit, no console errors).
+- Premium-minimal UI refresh and animated per-category photo guides (live Sat 17 Oct ~08:10; checked on live at phone width: greeting made logged out, Download opened the email step, cars guide auto-played on first visit, no console errors).
+- "Not ready yet?" waitlist (live Sat 17 Oct ~08:35): guest-only email drop on home and category pages, saved to its own `waitlist` table (never a user or profile, never counted as a signup). Checked on live: empty and invalid emails show an error and save nothing; live table at 0 rows. **Reminder owed:** send one email to everyone on it before Diwali (Sun 8 Nov).
 - Public repo matches the live code (pushed Sat 17 Oct).
 - Outreach messages for all four groups (Claude Doc "MakeMyVisual outreach messages"); gifting, fashion and skincare lead with the greeting to match the live links.
 - Write-up drafts (right to win, why now, moat, SOM): Claude Doc "MakeMyVisual sprint write-ups" (in progress).
@@ -506,7 +507,7 @@ M6 — verify and submit, by Sun 18 Oct 11:00 AM IST (aim 9:00 AM). Outreach goe
 
 ### in progress
 
-- "Remind me before Diwali" waitlist form (its own table, never counted as signups) — approved Sat 17 Oct; next.
+- Nothing in progress. Next: outreach at 11:00, then fix only where real people get stuck.
 
 ### current blocker
 

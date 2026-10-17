@@ -65,4 +65,11 @@ export default defineSchema({
     prompt: v.string(),
     storageId: v.id("_storage"),
   }).index("by_key", ["key"]).index("by_industry", ["industry"]),
+  // "Remind me before Diwali" emails from guests (home or category page). Not a signup: no user or
+  // business profile is ever made from it. One row per email (trimmed, lowercased).
+  waitlist: defineTable({
+    email: v.string(),
+    industry: v.optional(industryValidator),
+    source: v.union(v.literal("home"), v.literal("category")),
+  }).index("by_email", ["email"]),
 });

@@ -11,6 +11,7 @@ import Onboarding, { ChangeVertical, VerticalCards, type BusinessDetails } from 
 import { ShowcaseRow, exampleImages, examplesFor, type MakeKind } from "./Showcase";
 import { GREETING_SIZES } from "./adRenderer";
 import { Icon } from "./Icons";
+import Waitlist from "./Waitlist";
 import { GLOBAL_CSS, color, layout, text } from "./theme";
 
 const muted15 = { color: color.muted, fontSize: 15, lineHeight: 1.45 };
@@ -193,6 +194,10 @@ function Landing({ kind, onKind }: { kind: MakeKind; onKind: (kind: MakeKind) =>
         )}
       </div>
       <VerticalCards labelledBy="home-vertical" images={exampleImages(showcase, kind)} badges={SEASON_BADGES} hrefSearch={makeSearch(kind)} />
+
+      {/* Guests only: Landing never renders once signed in. */}
+      <hr style={divider} />
+      <Waitlist source="home" />
     </>
   );
 }
@@ -434,6 +439,8 @@ function VerticalPage({
               </section>
             </>
           )}
+          <hr style={divider} />
+          <Waitlist source="category" industry={industry} />
           <p style={{ margin: "32px 0 0" }}>
             <a href={"/" + makeSearch(kind)} className="mmv-link mmv-link--muted" style={{ fontSize: 14 }}>
               Sell something else? Choose another

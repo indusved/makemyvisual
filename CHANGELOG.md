@@ -21,3 +21,4 @@
 - Sat 17 Oct: businesses pick Instagram, WhatsApp or Website for their contact line, and greetings and ads show the matching small icon before it (pasted Instagram links are tidied to @handle)
 - Sat 17 Oct: a calmer, premium look on every screen (warm paper, ink text, one main button per screen, the finished picture in a framed preview)
 - Sat 17 Oct: each category's photo guide plays as a short step-by-step animation (what to avoid, then what works), opens by itself on the first visit, and can be paused or replayed
+- Sat 17 Oct: visitors who aren't ready can leave an email for one reminder before Diwali ("Not ready yet?" on the home page and each category page); it is kept apart from signups
