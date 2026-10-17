@@ -19,3 +19,5 @@
 - Sat 17 Oct: a shorter form (Greeting | Offer switch at the top, end date and fine print behind a link) and results that open at the top with a large preview, a size switcher and one main Share or Download button
 - Sat 17 Oct: the cut-out starts as soon as a photo is picked, a quick version shows right away, and a seconds counter shows while the cut-out finishes
 - Sat 17 Oct: businesses pick Instagram, WhatsApp or Website for their contact line, and greetings and ads show the matching small icon before it (pasted Instagram links are tidied to @handle)
+- Sat 17 Oct: a calmer, premium look on every screen (warm paper, ink text, one main button per screen, the finished picture in a framed preview)
+- Sat 17 Oct: each category's photo guide plays as a short step-by-step animation (what to avoid, then what works), opens by itself on the first visit, and can be paused or replayed
